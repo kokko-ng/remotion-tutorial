@@ -1,0 +1,13 @@
+{
+  "name": "remotion-tutorial",
+  "owner": {
+    "name": "kokko-ng"
+  },
+  "plugins": [
+    {
+      "name": "remotion-tutorial",
+      "source": ".",
+      "description": "Narrated technical tutorial videos: Remotion animation, Azure TTS, word-synced subtitles, aesthetic review."
+    }
+  ]
+}

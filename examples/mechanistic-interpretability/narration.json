@@ -1,0 +1,22 @@
+{
+  "voice": "en-US-AvaMultilingualNeural",
+  "rate": "-4%",
+  "scenes": [
+    {
+      "id": "s01",
+      "text": "Open up a neural network and you will not find ideas. You will find millions of numbers. Mechanistic interpretability treats those numbers as a machine we have not finished reading yet."
+    },
+    {
+      "id": "s02",
+      "text": "Start small. A neuron is a weighted sum. Multiply each input by its weight, add everything up, then pass the total through a simple gate. On its own, that is barely arithmetic. But wire thousands of these together and circuits appear: small teams of neurons that compute one specific thing, like an edge, a curve, or a quotation mark. Find the circuit, trace its wires, and one page of the machine becomes readable."
+    },
+    {
+      "id": "s03",
+      "text": "Here is a real example from vision models. Somewhere inside sits a neuron that loves curves. Show it a straight line and it stays quiet. Bend the line a little and it stirs. Bend it into a proper arc and it fires with enthusiasm. Nobody programmed that preference. It grew during training, and we found it afterward, the way a naturalist finds a new species."
+    },
+    {
+      "id": "s04",
+      "text": "To recap: a neuron is a weighted sum passed through a gate. A circuit is a small team of neurons that computes one specific thing. And the curve detector is the proof of concept, real structure found inside a trained network rather than programmed into it. The machine is strange, but it is readable."
+    }
+  ]
+}

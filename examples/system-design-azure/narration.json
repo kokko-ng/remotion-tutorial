@@ -1,0 +1,22 @@
+{
+  "voice": "en-US-AvaMultilingualNeural",
+  "rate": "-4%",
+  "scenes": [
+    {
+      "id": "s01",
+      "text": "Here is a classic interview prompt: design a URL shortener. Watch how the same three verbs keep coming back. Store, move, and remember."
+    },
+    {
+      "id": "s02",
+      "text": "First, the skeleton. Requests land on Azure Front Door, which is the front desk for the whole planet. It hands them to an App Service, the code that turns a long ugly link into a short one. The mapping has to live somewhere, so we store it in Cosmos DB, keyed by the short code. Store, move, remember. That is already a working system."
+    },
+    {
+      "id": "s03",
+      "text": "Now traffic grows, and reading Cosmos for every click gets expensive. So we remember harder. A Redis cache holds the hot links, and most clicks never touch the database at all. Writes get bursty, so a queue absorbs the spikes and a worker drains them at its own pace. And the partition key? The short code itself, so every lookup lands on exactly one partition. Notice we never invented anything new. We stored, we moved, we remembered."
+    },
+    {
+      "id": "s04",
+      "text": "To recap: Cosmos DB stored the mapping. Front Door moved the traffic, with the queue smoothing out the bursts. Redis and the partition key made remembering cheap. Store, move, remember. Most system design answers are those three verbs, arranged for the problem in front of you."
+    }
+  ]
+}

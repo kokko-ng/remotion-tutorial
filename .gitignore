@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+.DS_Store
+*.log
+
+# Generated media artifacts
+*.mp4
+*.wav
+*.mp3
+template/public/audio/*
+!template/public/audio/.gitkeep
+videos/
+
+# Local env
+.env
+__pycache__/

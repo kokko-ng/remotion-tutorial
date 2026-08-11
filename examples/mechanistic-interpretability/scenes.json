@@ -1,0 +1,43 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "preset": "chalkboard",
+  "title": "Mechanistic interpretability, reading the machine",
+  "chapters": [
+    {
+      "id": "ch01",
+      "title": "Mechanistic Interpretability"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "chapter": "ch01",
+      "component": "S01_Title",
+      "durationSec": 11.604,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s02",
+      "chapter": "ch01",
+      "component": "S02_Circuit",
+      "durationSec": 29.172,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s03",
+      "chapter": "ch01",
+      "component": "S03_CurveDetector",
+      "durationSec": 24.82,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s04",
+      "chapter": "ch01",
+      "component": "S04_Recall",
+      "durationSec": 20.287,
+      "padOutSec": 0.8
+    }
+  ]
+}
