@@ -1,0 +1,43 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "preset": "paper",
+  "title": "Azure networking, explained like a neighborhood",
+  "chapters": [
+    {
+      "id": "ch01",
+      "title": "ELI5 Azure Networking"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "chapter": "ch01",
+      "component": "S01_Title",
+      "durationSec": 6.842,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s02",
+      "chapter": "ch01",
+      "component": "S02_Neighborhood",
+      "durationSec": 23.246,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s03",
+      "chapter": "ch01",
+      "component": "S03_Peering",
+      "durationSec": 22.605,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s04",
+      "chapter": "ch01",
+      "component": "S04_Recall",
+      "durationSec": 17.022,
+      "padOutSec": 0.8
+    }
+  ]
+}

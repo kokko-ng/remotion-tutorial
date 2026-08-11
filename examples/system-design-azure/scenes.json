@@ -1,0 +1,43 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "preset": "terminal",
+  "title": "System design in Azure: URL shortener",
+  "chapters": [
+    {
+      "id": "ch01",
+      "title": "System Design in Azure"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s01",
+      "chapter": "ch01",
+      "component": "S01_Title",
+      "durationSec": 10.236,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s02",
+      "chapter": "ch01",
+      "component": "S02_Skeleton",
+      "durationSec": 22.208,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s03",
+      "chapter": "ch01",
+      "component": "S03_Scale",
+      "durationSec": 31.734,
+      "padOutSec": 0.6
+    },
+    {
+      "id": "s04",
+      "chapter": "ch01",
+      "component": "S04_Recall",
+      "durationSec": 19.392,
+      "padOutSec": 0.8
+    }
+  ]
+}
