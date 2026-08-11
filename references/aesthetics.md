@@ -16,7 +16,7 @@ that is to freestyle.
 | heading font | STIX Two Text (serif) | Nunito | IBM Plex Mono | Source Serif 4 |
 | shapes | 4px radius, 2.5px strokes, filled panels | 24px radius, flat filled, no strokes | 2px radius, 1.5px strokes | square, hairline rules |
 | motion | SVG draw-on, 22 frames, gentle bezier | springs with slight overshoot | hard snaps, typewriter | fades and hard cuts |
-| subtitles | plain white, soft shadow | on a soft cream pill | karaoke amber highlight | hairline top rule |
+| subtitles | plain white, soft shadow | plain warm ink, no background | karaoke amber highlight | hairline top rule |
 | vignette | yes (only preset allowed one) | no | no | no |
 
 When to pick which: chalkboard for math and theory, paper for friendly ELI5
