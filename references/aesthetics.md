@@ -44,6 +44,23 @@ any of them is a review finding:
   not because idle motion looks lively. No floating, no pulsing except the
   Arrow traffic dot, no parallax.
 
+## Motion correctness
+
+Two bugs shipped once and are now rules:
+
+- Gate looping animations (traffic pulses, blinking cursors) on elapsed
+  frames, never on entrance progress reaching 1. Spring entrances overshoot
+  and oscillate around 1 while settling, so a `progress >= 1` check turns the
+  loop on and off for several frames and the element flickers at arbitrary
+  positions. The Arrow pulse starts at `startFrame + 1.5 x motionFrames` and
+  advances monotonically from there.
+- A marker riding a dash-revealed path must be positioned by cumulative arc
+  length, the same measure `strokeDashoffset` reveals by. Indexing points by
+  draw progress desyncs the marker wherever arc length is not uniform in x
+  (a sigmoid's steep middle draws slower than its flat ends). GraphPlot
+  interpolates the tip position from cumulative segment lengths; reuse that
+  approach for any new path-following element.
+
 ## Composition habits that read as hand-crafted
 
 - Reveal on the spoken word (`wordFrame`), stagger siblings by 4 to 8 frames.

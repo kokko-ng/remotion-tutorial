@@ -46,16 +46,25 @@ export const GraphPlot: React.FC<{
   const path = points
     .map((pt, i) => `${i === 0 ? 'M' : 'L'} ${px(pt).toFixed(2)} ${py(pt).toFixed(2)}`)
     .join(' ');
-  let pathLen = 0;
+  // Cumulative arc lengths, so the marker dot can ride the true tip of the
+  // dash-revealed stroke. Indexing points by pCurve alone desyncs on curves
+  // whose arc length is not uniform in x (steep sections draw slower).
+  const cumLen: number[] = [0];
   for (let i = 1; i < points.length; i++) {
-    pathLen += Math.hypot(px(points[i]) - px(points[i - 1]), py(points[i]) - py(points[i - 1]));
+    cumLen.push(
+      cumLen[i - 1] +
+        Math.hypot(px(points[i]) - px(points[i - 1]), py(points[i]) - py(points[i - 1])),
+    );
   }
+  const pathLen = cumLen[cumLen.length - 1];
 
-  const tipIndex = Math.max(
-    1,
-    Math.min(points.length - 1, Math.floor(pCurve * (points.length - 1))),
-  );
-  const tip = points[tipIndex];
+  const drawnLen = pCurve * pathLen;
+  let seg = 1;
+  while (seg < cumLen.length - 1 && cumLen[seg] < drawnLen) seg++;
+  const segSpan = cumLen[seg] - cumLen[seg - 1];
+  const t = segSpan > 0 ? (drawnLen - cumLen[seg - 1]) / segSpan : 0;
+  const tipX = px(points[seg - 1]) + (px(points[seg]) - px(points[seg - 1])) * t;
+  const tipY = py(points[seg - 1]) + (py(points[seg]) - py(points[seg - 1])) * t;
 
   return (
     <Audit id={id}>
@@ -88,7 +97,7 @@ export const GraphPlot: React.FC<{
             strokeDashoffset={pathLen * (1 - pCurve)}
           />
           {showDot && pCurve > 0.01 && pCurve < 1 ? (
-            <circle cx={px(tip)} cy={py(tip)} r={8} fill={c} />
+            <circle cx={tipX} cy={tipY} r={8} fill={c} />
           ) : null}
         </svg>
         {xLabel ? (

@@ -33,6 +33,13 @@ Render stills, then open every PNG with the Read tool and check, in order:
    if it looks fine.
 8. Dead air: a still showing only the heading means the scene starts too
    late. Start structure (axes, group outlines) within the first 2 seconds.
+9. Temporal spot-check: stills cannot show flicker or drift, so for any
+   scene with a looping animation (Arrow pulse) or a path-following marker
+   (GraphPlot dot), render two extra stills a few frames apart around the
+   entrance settle and mid-loop, and confirm the element is present in both
+   and sits on its path. See "Motion correctness" in aesthetics.md for the
+   two failure modes this catches (progress-gated loops flickering during
+   spring settle, and markers desyncing from arc-length dash reveals).
 
 Record findings per still, fix the scene code, and re-render the stills for
 the scenes you touched.

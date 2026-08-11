@@ -45,7 +45,12 @@ export const Arrow: React.FC<{
   const ly2 = ay2 - uy * head;
 
   const drawn = p * len;
-  const pulseT = pulse && p >= 1 ? ((frame - startFrame) % 45) / 45 : null;
+  // Gate the pulse on elapsed frames, not on entrance progress: a spring
+  // entrance oscillates around 1 while settling, which made a p >= 1 check
+  // flicker the dot on and off at arbitrary positions along the line.
+  const pulseDelay = Math.round(theme.motionFrames * 1.5);
+  const pulseElapsed = frame - startFrame - pulseDelay;
+  const pulseT = pulse && pulseElapsed >= 0 ? (pulseElapsed % 45) / 45 : null;
   const strokeW = Math.max(2, theme.stroke);
 
   const angle = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
