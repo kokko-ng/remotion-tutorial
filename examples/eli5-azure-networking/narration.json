@@ -1,0 +1,22 @@
+{
+  "voice": "en-US-AvaMultilingualNeural",
+  "rate": "-4%",
+  "scenes": [
+    {
+      "id": "s01",
+      "text": "Azure networking looks scary until you notice it is really one question. Who gets to knock on whose door?"
+    },
+    {
+      "id": "s02",
+      "text": "A virtual network, a VNet, is a private neighborhood you build inside Azure. Your virtual machines are the houses. Streets divide the neighborhood into subnets, so the web servers live on one street and the databases on another. And the fence around each street is a network security group. It is a list of rules that says who may knock, on which door, and from where."
+    },
+    {
+      "id": "s03",
+      "text": "Now, two neighborhoods. By default they are strangers. Peering builds a private bridge between them, so traffic crosses without ever touching the public internet. Notice the shape of that move. We did not open a gate to the whole internet. We connected two specific neighborhoods, on purpose. Azure stays closed by default, and you open it deliberately."
+    },
+    {
+      "id": "s04",
+      "text": "Quick recap. The neighborhood is a virtual network. The streets are subnets, and the fence checking every knock is a network security group. Peering is the bridge between two neighborhoods. That is the core of Azure networking, and everything else builds on those four pieces."
+    }
+  ]
+}

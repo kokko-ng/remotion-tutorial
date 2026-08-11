@@ -1,0 +1,9 @@
+{
+  "name": "remotion-tutorial",
+  "version": "1.0.0",
+  "description": "Produce narrated technical tutorial videos with Remotion, Azure TTS voiceover, word-synced subtitles, and a mandatory aesthetic review.",
+  "author": {
+    "name": "kokko-ng"
+  },
+  "license": "MIT"
+}
