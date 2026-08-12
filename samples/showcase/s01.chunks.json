@@ -1,0 +1,17 @@
+[
+  {
+    "text": "Every hop on the path costs you time",
+    "startMs": 1200,
+    "endMs": 4600,
+    "words": [
+      {"text": "Every", "startMs": 1200, "endMs": 1620},
+      {"text": "hop", "startMs": 1620, "endMs": 2040},
+      {"text": "on", "startMs": 2040, "endMs": 2460},
+      {"text": "the", "startMs": 2460, "endMs": 2880},
+      {"text": "path", "startMs": 2880, "endMs": 3300},
+      {"text": "costs", "startMs": 3300, "endMs": 3720},
+      {"text": "you", "startMs": 3720, "endMs": 4140},
+      {"text": "time", "startMs": 4140, "endMs": 4600}
+    ]
+  }
+]
