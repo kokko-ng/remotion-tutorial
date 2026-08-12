@@ -52,7 +52,9 @@ Collect or infer:
 - **duration** in minutes, default 60
 - **aesthetic**: one of `chalkboard` (3Blue1Brown-like dark), `paper`
   (Primer-like warm light), `terminal` (systems/code dark), `print`
-  (editorial light). Show the user the one-line descriptions and let them pick.
+  (editorial light). Show the user the one-line descriptions and point them
+  at the sample stills in `samples/` (`<preset>.png` is a scene,
+  `<preset>-title.png` a title card), then let them pick.
 - **audience**: beginner, practitioner, or interview prep
 
 Word budget: duration x 155 words per minute (measured for

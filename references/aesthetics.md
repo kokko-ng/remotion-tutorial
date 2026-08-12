@@ -23,6 +23,23 @@ When to pick which: chalkboard for math and theory, paper for friendly ELI5
 and metaphor-driven explainers, terminal for systems, infrastructure, and
 code walkthroughs, print for history, proofs, and editorial tone.
 
+## Samples
+
+One scene and one title card per preset, all rendered from the same source,
+so the difference between two presets is only the tokens. Show these to the
+user when they are picking a preset.
+
+| preset | scene | title card |
+|---|---|---|
+| chalkboard | [chalkboard.png](../samples/chalkboard.png) | [chalkboard-title.png](../samples/chalkboard-title.png) |
+| paper | [paper.png](../samples/paper.png) | [paper-title.png](../samples/paper-title.png) |
+| terminal | [terminal.png](../samples/terminal.png) | [terminal-title.png](../samples/terminal-title.png) |
+| print | [print.png](../samples/print.png) | [print-title.png](../samples/print-title.png) |
+
+The showcase scene lives in `samples/showcase/`. After changing any token in
+`template/src/theme/tokens.ts`, or any component the showcase uses, rerun
+`samples/render_samples.sh` so the images still describe the presets.
+
 ## Hard anti-slop rules
 
 These are what separate the output from generic AI-generated UI. Violating

@@ -1,0 +1,31 @@
+[
+  {
+    "text": "The client talks to the gateway first",
+    "startMs": 900,
+    "endMs": 4000,
+    "words": [
+      {"text": "The", "startMs": 900, "endMs": 1300},
+      {"text": "client", "startMs": 1300, "endMs": 1700},
+      {"text": "talks", "startMs": 1700, "endMs": 2100},
+      {"text": "to", "startMs": 2100, "endMs": 2500},
+      {"text": "the", "startMs": 2500, "endMs": 2900},
+      {"text": "gateway", "startMs": 2900, "endMs": 3400},
+      {"text": "first", "startMs": 3400, "endMs": 4000}
+    ]
+  },
+  {
+    "text": "and the gateway is where the queueing starts",
+    "startMs": 5400,
+    "endMs": 9000,
+    "words": [
+      {"text": "and", "startMs": 5400, "endMs": 5850},
+      {"text": "the", "startMs": 5850, "endMs": 6300},
+      {"text": "gateway", "startMs": 6300, "endMs": 6750},
+      {"text": "is", "startMs": 6750, "endMs": 7200},
+      {"text": "where", "startMs": 7200, "endMs": 7650},
+      {"text": "the", "startMs": 7650, "endMs": 8100},
+      {"text": "queueing", "startMs": 8100, "endMs": 8550},
+      {"text": "starts", "startMs": 8550, "endMs": 9000}
+    ]
+  }
+]
