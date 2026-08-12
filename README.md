@@ -27,6 +27,17 @@ What the skill enforces:
 - Per-chapter renders concatenated losslessly, so a 60-minute video (the
   default duration) is built from retryable units.
 
+## Presets
+
+The same scene rendered in each of the four presets. Title cards and the
+scene that generates these are in [`samples/`](samples).
+
+| chalkboard — math and theory | paper — friendly ELI5 and metaphor |
+|---|---|
+| ![chalkboard preset](samples/chalkboard.png) | ![paper preset](samples/paper.png) |
+| **terminal** — systems, infra, code | **print** — history, proofs, editorial |
+| ![terminal preset](samples/terminal.png) | ![print preset](samples/print.png) |
+
 ## Install
 
 ```bash
@@ -53,6 +64,7 @@ video on eigenvalues, chalkboard style").
 - `scripts/` — voiceover generation, subtitle building, review stills,
   chapter concat
 - `template/` — the complete Remotion project each video starts from
+- `samples/` — one still per preset and the showcase scene that renders them
 - `examples/` — briefs, narrations, and scene code of the three demo videos
   (ELI5 Azure Networking, Mechanistic Interpretability, System Design in
   Azure), one per aesthetic preset
