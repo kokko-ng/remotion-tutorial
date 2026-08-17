@@ -74,3 +74,14 @@ panels, callouts. Do not wrap: arrows and edges (they cross boxes by
 design), backgrounds, the subtitle layer (it has its own reserved band).
 Group boxes audit only their title chip, since nodes inside a group overlap
 the group's area on purpose.
+
+The same exemption covers captions that annotate a shared track rather than
+occupying their own space: the labels sitting on a timeline or progress bar
+overlap the bar by design, exactly as an arrow label does. Auditing them
+produces red on a layout that is correct. Audit the track, not its captions.
+
+The overlay is worth trusting over your own eye on reserved space. Elements
+that are invisible at the sampled frame still reserve their box, so a
+collision can be real while every still looks clean. Scanning the debug
+frames for the violation color (`#ff0033`) catches these in one pass and is
+far quicker than reading every still twice.
