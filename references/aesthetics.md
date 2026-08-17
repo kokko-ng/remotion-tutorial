@@ -78,6 +78,23 @@ Two bugs shipped once and are now rules:
   interpolates the tip position from cumulative segment lengths; reuse that
   approach for any new path-following element.
 
+## Component correctness
+
+Two more bugs that shipped once and cost a render cycle each:
+
+- Pass KaTeX through a JSX **expression container**, not a quoted attribute.
+  `tex="\\text{x}"` does not unescape the way a JS string literal would: JSX
+  attribute values are treated like HTML, so the component receives two
+  literal backslashes and KaTeX reads `\\` as a line break followed by the
+  word "text". The symptom is an equation rendering as `textutilisation`
+  with the backslashes and braces gone. Write `tex={'\\text{x}'}` instead.
+- `EquationBlock` reserves more vertical space than its glyphs occupy. Its
+  audited box can run a couple of hundred pixels past what you see, so a
+  diagram placed directly beneath it looks fine in a still and still trips
+  the debug overlay. Leave a generous gap under any equation, and when the
+  formula is simple enough to write inline (`utilisation = billable hours /
+  available hours`) a plain `Node` is the better choice.
+
 ## Composition habits that read as hand-crafted
 
 - Reveal on the spoken word (`wordFrame`), stagger siblings by 4 to 8 frames.
