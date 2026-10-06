@@ -4,7 +4,9 @@ A Claude Code skill that turns a topic into a narrated technical tutorial
 video: Remotion-rendered animation in the visual language of hand-crafted
 math channels, an Azure neural voiceover with word-accurate burned-in
 subtitles, and an exported .srt. Built for math and computer science
-explainers.
+explainers, and for Fireship-style codebase walkthroughs that onboard
+engineers to a repository's architecture
+(`references/codebase-walkthrough.md`).
 
 What the skill enforces:
 
@@ -23,11 +25,14 @@ What the skill enforces:
   returns per-word timestamps; visual reveals are keyed to the exact frame a
   word or phrase is spoken.
 - An automated layout sweep over the whole video: every scene is rendered
-  every second with a layout audit that fails on text overflowing its box,
-  cramped insets and gaps, safe-margin and subtitle-band violations,
-  connector blemishes (dangling ends, stubs, skewed lines, arrows through
-  boxes, crowded labels, off-center landings), markers on boxes, off-center
-  zones, an empty lower third, and missing word cues.
+  every second with a layout audit that fails on text overflowing its box
+  or the frame, clipped or illegible text, cramped insets and gaps,
+  safe-margin and subtitle-band violations, off-centre showcases, misaligned
+  columns, connector blemishes (dangling ends, stubs, skewed lines, arrows
+  through boxes or text, crowded labels, off-center landings, piled-up
+  heads), markers on boxes, off-center zones, an empty lower third, sliced or
+  unnamed diagram labels, and missing word cues. A self-test proves every
+  rule can fail.
 - A mandatory two-pass aesthetic review: rendered stills are visually
   inspected against a checklist, then re-inspected at shifted timestamps with
   a layout-audit overlay that flags overlaps and margin violations in red.
@@ -67,9 +72,13 @@ video on eigenvalues, chalkboard style").
 
 - `SKILL.md` — the workflow the agent follows
 - `references/` — narration voice, humanizer rules, aesthetic presets,
-  review checklist, Azure TTS pipeline, grounding and licensing
-- `scripts/` — voiceover generation, subtitle building, layout sweep,
-  review stills, chapter concat
+  review checklist, Azure TTS pipeline, grounding and licensing, the
+  codebase walkthrough method, its gotchas, and brief templates for the
+  subagents it uses (`references/briefs/`)
+- `scripts/` — voiceover generation, SSML validation, subtitle building,
+  layout sweep and its self-test, stills export, review stills, diagram
+  recolouring for dark presets, image generation (FLUX on Azure AI Foundry),
+  image credits, chapter concat
 - `template/` — the complete Remotion project each video starts from
 - `samples/` — one still per preset and the showcase scene that renders them
 - `examples/` — briefs, narrations, and scene code of the three demo videos

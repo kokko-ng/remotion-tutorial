@@ -110,7 +110,8 @@ export const themes: Record<string, Theme> = {
     bg: '#101418',
     bgPanel: '#171d24',
     ink: '#d6deeb',
-    inkMuted: '#6b7a8c',
+    // raised from #6b7a8c (4.2:1) to clear the 4.5:1 floor on bg and panel
+    inkMuted: '#8394a7',
     accent: '#ffb454',
     accent2: '#7fd6c2',
     accent3: '#d16d9e',

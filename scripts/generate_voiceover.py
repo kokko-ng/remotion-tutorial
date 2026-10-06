@@ -23,9 +23,27 @@ SSML mode (--ssml, or "ssml": true in the narration file) wraps each scene in
 SSML: the rate becomes a <prosody> rate, every "[beat]" marker in the text
 becomes a <break time="250ms"/> (--beat to change), and --lexicon points at a
 JSON map {"display text": "spoken alias"} whose entries become <sub alias>
-pronunciations (e.g. {"GiB": "gibibytes"}). Azure reports word boundaries for
-a <sub> term as the alias plus a stray '">' token; the script maps them back so
-words.json (and the subtitles) keep the display text.
+pronunciations (e.g. {"GiB": "gibibytes"}).
+
+Authored SSML: a scene may carry an "ssml" field, the scene's narration as the
+inner content of <voice> (prosody asides, emphasis, sub, say-as, breaks; see
+references/briefs/SSML-SPEC.md). Its visible text must equal "text" with
+[beat] removed; scripts/validate_ssml.py checks that. A scene with "ssml"
+always synthesizes in SSML mode.
+
+Two Azure rules the script enforces: <prosody> may not contain <break> or
+<emphasis>, so markup is flattened into runs each wrapped in its prosody stack
+(base rate outermost) with breaks and emphasis between them; and <emphasis> is
+only honoured by en-US-GuyNeural, DavisNeural and JaneNeural, so it is
+unwrapped for other voices. "sentenceGap" (narration file) or --sentence-gap
+sets mstts:silence Sentenceboundary-exact for a tighter pace.
+
+Word timings: boundary text is unreliable (multilingual voices attach the rest
+of the sentence to punctuation events; <sub> reports the alias plus a '">'
+fragment), so events are aligned by sequence to the planned spoken words and
+words.json carries exactly the subtitle words with their timings. If fewer than
+90 percent of spoken words align, the script warns and falls back to mapping
+the raw tokens.
 In plain-text mode "[beat]" markers are removed before synthesis.
 
 Authentication: reads SPEECH_KEY from the environment if set, otherwise fetches
@@ -165,18 +183,165 @@ def xml_escape(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
-def to_ssml(text, voice, rate, lexicon, beat):
-    body = xml_escape(text)
+EMPHASIS_VOICES = {"en-US-GuyNeural", "en-US-DavisNeural", "en-US-JaneNeural"}
+
+
+def inner_ssml(scene, lexicon, beat):
+    """The scene's narration as SSML inner content (no speak/voice wrapper):
+    the authored "ssml" field if present, else the text with lexicon <sub>
+    aliases and [beat] breaks."""
+    if scene.get("ssml"):
+        return scene["ssml"]
+    body = xml_escape(scene["text"])
     # longest keys first so "RA-GZRS" wins over "GZRS"
     for key in sorted(lexicon, key=len, reverse=True):
         pat = r"(?<![\w-])" + re.escape(xml_escape(key)) + r"(?![\w-])"
         body = re.sub(pat, f'<sub alias="{xml_escape(lexicon[key])}">{xml_escape(key)}</sub>', body)
-    body = body.replace("[beat]", f'<break time="{beat}"/>')
+    return body.replace("[beat]", f'<break time="{beat}"/>')
+
+
+def flatten_prosody(inner, rate):
+    """Apply the base rate without putting <break> or <emphasis> inside
+    <prosody> (Azure's SSML allows neither there). The markup is flattened into
+    runs tagged with their prosody stack (base rate outermost); runs with the
+    same stack are re-wrapped in nested <prosody>, and <break> and <emphasis>
+    are emitted between them."""
+    import xml.etree.ElementTree as ET
+    from xml.sax.saxutils import escape as esc, quoteattr
+
+    def serial(el):
+        attrs = "".join(f" {k}={quoteattr(v)}" for k, v in el.attrib.items())
+        body = esc(el.text or "") + "".join(serial(c) + esc(c.tail or "") for c in el)
+        return f"<{el.tag}{attrs}>{body}</{el.tag}>" if body else f"<{el.tag}{attrs}/>"
+
+    tokens = []  # (stack, markup, standalone)
+
+    def walk(el, stack):
+        if el.text:
+            tokens.append((stack, esc(el.text), False))
+        for child in el:
+            if child.tag == "prosody":
+                walk(child, stack + (tuple(sorted(child.attrib.items())),))
+            elif child.tag in ("break", "emphasis"):
+                tokens.append((stack, serial(child), True))
+            else:  # sub, say-as: allowed inside prosody
+                tokens.append((stack, serial(child), False))
+            if child.tail:
+                tokens.append((stack, esc(child.tail), False))
+
+    walk(ET.fromstring(f"<wrap>{inner}</wrap>"), ((("rate", rate),),))
+    out, i = [], 0
+    while i < len(tokens):
+        stack, markup, standalone = tokens[i]
+        if standalone:
+            out.append(markup)
+            i += 1
+            continue
+        run = []
+        while i < len(tokens) and not tokens[i][2] and tokens[i][0] == stack:
+            run.append(tokens[i][1])
+            i += 1
+        text = "".join(run)
+        if text.strip():
+            for attrs in reversed(stack):
+                text = f"<prosody{''.join(f' {k}={quoteattr(v)}' for k, v in attrs)}>{text}</prosody>"
+        out.append(text)
+    return "".join(out)
+
+
+def to_ssml(inner, voice, rate, sentence_gap=None):
+    if voice not in EMPHASIS_VOICES:
+        inner = re.sub(r"</?emphasis\b[^>]*>", "", inner)
+    gap = f'<mstts:silence type="Sentenceboundary-exact" value="{sentence_gap}"/>' if sentence_gap else ""
     return (
         '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-        'xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">'
-        f'<voice name="{voice}"><prosody rate="{rate}">{body}</prosody></voice></speak>'
+        'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">'
+        f'<voice name="{voice}">{gap}{flatten_prosody(inner, rate)}</voice></speak>'
     )
+
+
+def _norm(t):
+    return "".join(ch for ch in t.lower() if ch.isalnum())
+
+
+def spoken_plan(scene, inner):
+    """The words the voice will say, each tagged with the index of the visible
+    (subtitle) word it belongs to: a <sub> alias is several spoken words for
+    one visible word, everything else is one to one."""
+    import xml.etree.ElementTree as ET
+    visible = scene["text"].replace("[beat]", " ").split()
+    plan, vi = [], 0
+
+    def take(fragment):
+        nonlocal vi
+        for w in fragment.split():
+            if vi < len(visible):
+                plan.append((_norm(w), vi))
+                vi += 1
+
+    def walk(el):
+        nonlocal vi
+        if el.tag == "sub":
+            start = vi
+            for w in el.get("alias", "").split():
+                plan.append((_norm(w), start))
+            vi += max(1, len((el.text or "").split()))
+        else:
+            take(el.text or "")
+            for child in el:
+                walk(child)
+                take(child.tail or "")
+
+    if inner is None:
+        take(" ".join(visible))
+    else:
+        walk(ET.fromstring(f"<wrap>{inner}</wrap>"))
+    return visible, plan
+
+
+def align_words(scene, inner, raw):
+    """Word timings for the visible words, from boundary events matched to the
+    planned spoken words by sequence alignment (only event timings are kept).
+    Returns (words, matched_ratio)."""
+    import difflib
+    visible, plan = spoken_plan(scene, inner)
+    events = []
+    for e in raw:
+        t = e["Text"]
+        if not t or t[0] in ".,;:!?" or not any(ch.isalnum() for ch in t):
+            continue
+        if t.startswith('">'):
+            t = t.split()[-1]
+        events.append((_norm(t), e["AudioOffset"], e["Duration"]))
+    sm = difflib.SequenceMatcher(a=[p[0] for p in plan], b=[e[0] for e in events], autojunk=False)
+    times = [None] * len(plan)
+    matched = 0
+    for tag, a0, a1, b0, b1 in sm.get_opcodes():
+        if tag == "equal":
+            matched += a1 - a0
+            for k in range(a1 - a0):
+                times[a0 + k] = events[b0 + k][1:]
+        elif tag == "replace":
+            for k in range(a1 - a0):
+                times[a0 + k] = events[b0 + min(b1 - b0 - 1, int(k * (b1 - b0) / (a1 - a0)))][1:]
+    for k, t in enumerate(times):
+        if t is None:
+            prev = next((times[i] for i in range(k - 1, -1, -1) if times[i]), (0, 0))
+            times[k] = (prev[0] + prev[1], 0)
+    span = {}
+    for (_, vi), (start, dur) in zip(plan, times):
+        s0, e0 = span.get(vi, (start, start + dur))
+        span[vi] = (min(s0, start), max(e0, start + dur))
+    out = []
+    for vi, w in enumerate(visible):
+        last_end = out[-1]["startMs"] + out[-1]["durationMs"] if out else 0
+        start, end = span.get(vi, (last_end, last_end))
+        end = max(end, start)
+        core = w.rstrip(".,;:!?")
+        out.append({"text": core or w, "startMs": start, "durationMs": end - start, "punct": False})
+        for ch in w[len(core):]:
+            out.append({"text": ch, "startMs": end, "durationMs": 0, "punct": True})
+    return out, matched / max(1, len(plan))
 
 
 def main():
@@ -193,6 +358,7 @@ def main():
     ap.add_argument("--ssml", action="store_true", help="synthesize from SSML (prosody rate, [beat] breaks, lexicon)")
     ap.add_argument("--lexicon", default=None, help="JSON map of display text -> spoken alias (SSML mode)")
     ap.add_argument("--beat", default="250ms", help="pause length for [beat] markers (SSML mode)")
+    ap.add_argument("--sentence-gap", default=None, help="SSML mode: exact silence between sentences, e.g. 260ms")
     args = ap.parse_args()
 
     narration = json.loads(Path(args.narration).read_text())
@@ -208,12 +374,14 @@ def main():
 
     voice = args.voice or narration.get("voice") or DEFAULT_VOICE
     rate = args.rate or narration.get("rate") or DEFAULT_RATE
-    use_ssml = args.ssml or bool(narration.get("ssml"))
+    use_ssml = args.ssml or narration.get("ssml") is True or any(s.get("ssml") for s in scenes)
     lexicon = json.loads(Path(args.lexicon).read_text()) if args.lexicon else {}
     if lexicon and not use_ssml:
         sys.exit("--lexicon needs SSML mode (--ssml)")
+    gap = args.sentence_gap or narration.get("sentenceGap")
+    inners = {s["id"]: inner_ssml(s, lexicon, args.beat) for s in scenes} if use_ssml else {}
     if use_ssml:
-        inputs = [{"content": to_ssml(s["text"], voice, rate, lexicon, args.beat)} for s in scenes]
+        inputs = [{"content": to_ssml(inners[s["id"]], voice, rate, gap)} for s in scenes]
         config = {}
     else:
         inputs = [{"content": re.sub(r"\s*\[beat\]\s*", " ", s["text"]).strip()} for s in scenes]
@@ -273,7 +441,11 @@ def main():
         wav_path.write_bytes(zf.read(res["audioFileName"]))
         raw_words = json.loads(zf.read(res["wordBoundaryFileName"]))
         words_path = audio_dir / f"{scene['id']}.words.json"
-        words_path.write_text(json.dumps(clean_break_tokens(restore_display(normalize_words(raw_words), lexicon)), indent=1))
+        aligned, ratio = align_words(scene, inners.get(scene["id"]), raw_words)
+        if ratio < 0.9:
+            print(f"  warning: {scene['id']}: only {ratio:.0%} of spoken words aligned; using raw boundary tokens")
+            aligned = clean_break_tokens(restore_display(normalize_words(raw_words), lexicon))
+        words_path.write_text(json.dumps(aligned, indent=1))
         dur = int(res["properties"]["durationInMilliseconds"]) / 1000.0
         if dur <= 0:
             dur = wav_duration_sec(wav_path)

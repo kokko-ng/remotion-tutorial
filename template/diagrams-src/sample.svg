@@ -1,0 +1,34 @@
+<svg class="figure" viewBox="0 0 1280 560" xmlns="http://www.w3.org/2000/svg">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<g id="sample-boundary">
+<title>System</title>
+<rect x="40" y="40" width="760" height="420" rx="8" fill="rgba(62,51,45,0.02)" stroke="rgba(62,51,45,0.10)" stroke-width="0.8"/>
+<text x="60" y="62" fill="#6B625C" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">SAMPLE SYSTEM · BOUNDARY</text>
+<g id="sample-api">
+<title>API</title>
+<rect x="80" y="100" width="220" height="110" rx="6" fill="#FFFFFF" stroke="#3E332D" stroke-width="1"/>
+<text x="92" y="116" fill="#6B625C" font-size="7" font-family="'Geist Mono', ui-monospace, monospace">CONTAINER</text>
+<text x="190" y="150" fill="#3E332D" font-size="12" font-weight="600" font-family="'Inter', Arial, sans-serif" text-anchor="middle">API</text>
+<text x="190" y="168" fill="#6B625C" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">[Container: Python]</text>
+</g>
+<g id="sample-worker">
+<title>Worker</title>
+<rect x="480" y="100" width="220" height="110" rx="6" fill="#FFFFFF" stroke="#3E332D" stroke-width="1"/>
+<text x="492" y="116" fill="#6B625C" font-size="7" font-family="'Geist Mono', ui-monospace, monospace">CONTAINER</text>
+<text x="590" y="150" fill="#3E332D" font-size="12" font-weight="600" font-family="'Inter', Arial, sans-serif" text-anchor="middle">Worker</text>
+<text x="590" y="168" fill="#6B625C" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">[Container: Python]</text>
+</g>
+<g id="sample-store">
+<title>Store</title>
+<rect x="280" y="300" width="240" height="110" rx="6" fill="#F5F5F5" stroke="#3E332D" stroke-width="1"/>
+<text x="292" y="316" fill="#6B625C" font-size="7" font-family="'Geist Mono', ui-monospace, monospace">DATA STORE</text>
+<text x="400" y="350" fill="#3E332D" font-size="12" font-weight="600" font-family="'Inter', Arial, sans-serif" text-anchor="middle">Store</text>
+<text x="400" y="368" fill="#6B625C" font-size="9" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">[Container: Redis]</text>
+</g>
+</g>
+<line x1="300" y1="155" x2="478" y2="155" stroke="#6B625C" stroke-width="1.2"/>
+<text x="389" y="146" fill="#8F8781" font-size="8" font-family="'Geist Mono', ui-monospace, monospace" text-anchor="middle">QUEUES WORK</text>
+<line x1="590" y1="210" x2="470" y2="298" stroke="#D40E8C" stroke-width="1.2"/>
+<text x="600" y="262" fill="#8F8781" font-size="8" font-family="'Geist Mono', ui-monospace, monospace">WRITES STATE</text>
+<text x="40" y="500" fill="#6B625C" font-size="7" font-family="'Geist Mono', ui-monospace, monospace" letter-spacing="0.14em">LEGEND · BOX = CONTAINER · GREY BOX = DATA STORE</text>
+</svg>

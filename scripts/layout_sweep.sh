@@ -11,7 +11,8 @@
 PROJECT=${1:?usage: layout_sweep.sh <project> [chapters...]}
 shift
 cd "$PROJECT" || exit 2
-CHS=${*:-$(python3 -c "import json;print(' '.join(c['id'] for c in json.load(open('scenes.json'))['chapters']))")}
+# dev chapters ("dev": true: the layout fixture, previews) run only when named
+CHS=${*:-$(python3 -c "import json;print(' '.join(c['id'] for c in json.load(open('scenes.json'))['chapters'] if not c.get('dev')))")}
 OUT=${TMPDIR:-/tmp}/layout-sweep-$(basename "$PWD"); mkdir -p "$OUT"
 EVERY=${SWEEP_EVERY_SEC:-2}
 status=0

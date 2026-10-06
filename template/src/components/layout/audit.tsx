@@ -1,6 +1,7 @@
 import React, {
   createContext,
   useContext,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -23,11 +24,16 @@ import {runLayoutChecks, zoneBalance, type Rect} from './checks';
  * so scripts/layout_sweep.sh can collect them across a whole chapter.
  */
 
-type Registry = Map<string, HTMLElement>;
+/**
+ * Keyed by a unique React id, not the audit id: two blocks that share an audit
+ * id are both measured (keying by id silently dropped all but one, which once
+ * hid a 354px overflow) and the duplicate itself is a finding.
+ */
+type Registry = Map<string, {id: string; el: HTMLElement}>;
 
 interface AuditApi {
-  register: (id: string, el: HTMLElement) => void;
-  unregister: (id: string) => void;
+  register: (key: string, id: string, el: HTMLElement) => void;
+  unregister: (key: string) => void;
 }
 
 const AuditContext = createContext<AuditApi | null>(null);
@@ -42,12 +48,12 @@ export const AuditProvider: React.FC<{
   // scenes mount content asynchronously (e.g. once word timings load)
   const [version, setVersion] = useState(0);
   const [api] = useState<AuditApi>(() => ({
-    register: (id, el) => {
-      registry.set(id, el);
+    register: (key, id, el) => {
+      registry.set(key, {id, el});
       setVersion((v) => v + 1);
     },
-    unregister: (id) => {
-      registry.delete(id);
+    unregister: (key) => {
+      registry.delete(key);
       setVersion((v) => v + 1);
     },
   }));
@@ -68,13 +74,14 @@ export const Audit: React.FC<{id: string; children: React.ReactNode}> = ({
 }) => {
   const api = useContext(AuditContext);
   const ref = useRef<HTMLDivElement>(null);
+  const key = useId();
   useLayoutEffect(() => {
     const el = ref.current;
     if (api && el) {
-      api.register(id, el);
-      return () => api.unregister(id);
+      api.register(key, id, el);
+      return () => api.unregister(key);
     }
-  }, [api, id]);
+  }, [api, id, key]);
   return (
     <div ref={ref} style={{display: 'contents'}}>
       {children}
@@ -100,6 +107,14 @@ const unionChildRects = (el: HTMLElement): DOMRect | null => {
   return acc;
 };
 
+/** Hidden by an opacity-0 ancestor, as a premounted <Sequence> is: not on screen. */
+const invisibleByAncestor = (el: HTMLElement): boolean => {
+  for (let n: HTMLElement | null = el; n; n = n.parentElement) {
+    if (getComputedStyle(n).opacity === '0') return true;
+  }
+  return false;
+};
+
 const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: string}> = ({
   registry,
   version,
@@ -118,7 +133,8 @@ const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: stri
     const sy = height / c.height;
     const toFrame = (m: DOMRect): Rect => ({x: (m.x - c.x) * sx, y: (m.y - c.y) * sy, w: m.width * sx, h: m.height * sy});
     const audited: {id: string; el: HTMLElement; rect: Rect}[] = [];
-    for (const [id, el] of registry) {
+    for (const {id, el} of registry.values()) {
+      if (invisibleByAncestor(el)) continue;
       const m = unionChildRects(el);
       if (!m) continue;
       audited.push({id, el, rect: toFrame(m)});

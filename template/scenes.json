@@ -4,8 +4,57 @@
   "height": 1080,
   "preset": "chalkboard",
   "title": "Example video",
-  "chapters": [{"id": "ch01", "title": "Example chapter"}],
+  "chapters": [
+    {
+      "id": "ch01",
+      "title": "Example chapter"
+    },
+    {
+      "id": "dev",
+      "title": "Clean preview (must pass)",
+      "dev": true
+    },
+    {
+      "id": "devfail",
+      "title": "Layout fixture (must fail every rule)",
+      "dev": true
+    }
+  ],
   "scenes": [
-    {"id": "s01", "chapter": "ch01", "component": "S01_Example", "durationSec": 0, "padOutSec": 0.5}
+    {
+      "id": "s01",
+      "chapter": "ch01",
+      "component": "S01_Example",
+      "durationSec": 0,
+      "padOutSec": 0.5
+    },
+    {
+      "id": "d01",
+      "chapter": "dev",
+      "component": "DevPreview",
+      "durationSec": 0,
+      "padOutSec": 6
+    },
+    {
+      "id": "d02",
+      "chapter": "devfail",
+      "component": "DevLayoutFixture",
+      "durationSec": 0,
+      "padOutSec": 2
+    },
+    {
+      "id": "d03",
+      "chapter": "devfail",
+      "component": "DevColumnFixture",
+      "durationSec": 0,
+      "padOutSec": 1
+    },
+    {
+      "id": "d04",
+      "chapter": "devfail",
+      "component": "DevConnectorFixture",
+      "durationSec": 0,
+      "padOutSec": 4
+    }
   ]
 }
