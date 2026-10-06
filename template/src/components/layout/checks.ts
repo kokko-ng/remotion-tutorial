@@ -23,6 +23,8 @@ export const RULES = {
   linkEndGap: 10,
   /** Shortest visible connector; anything shorter reads as a stub. */
   minLinkLen: 48,
+  /** Segments this close to an axis (degrees) but not on it look like mistakes. */
+  skewDeg: 12,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -213,3 +215,22 @@ const linkShort = ({scope, add, toFrame, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkShort);
+
+/** link-skew / link-diagonal: segments are horizontal or vertical. */
+const linkGeometry = ({scope, add, toFrame}: RuleCtx) => {
+  linkEls(scope).forEach((el, k) => {
+    const pts: [number, number][] = JSON.parse(el.getAttribute('data-points') ?? '[]');
+    for (let i = 1; i < pts.length; i++) {
+      const dx = Math.abs(pts[i][0] - pts[i - 1][0]);
+      const dy = Math.abs(pts[i][1] - pts[i - 1][1]);
+      if (dx <= 1.5 || dy <= 1.5) continue;
+      const ang = (Math.atan2(Math.min(dx, dy), Math.max(dx, dy)) * 180) / Math.PI;
+      const r = toFrame(el.getBoundingClientRect());
+      const name = `${el.getAttribute('data-link')}#${k}`;
+      if (ang < RULES.skewDeg) add(`link-skew:${name}(${ang.toFixed(1)}deg)`, r);
+      else if (!el.getAttribute('data-diagonal')) add(`link-diagonal:${name}`, r);
+      break;
+    }
+  });
+};
+EXTRA_RULES.push(linkGeometry);
