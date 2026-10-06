@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0
+## 1.3.0
 
 - Codebase walkthrough mode: `references/codebase-walkthrough.md` is the
   default structure for Fireship-style onboarding videos about a repository
@@ -11,8 +11,11 @@
   fix, SSML, scene guide).
 - New layout rules in `checks.ts`: `duplicate-id`, `text-overflow`,
   `clipped-text`, `illegible-text`, `cropped-label`, `unlabelled-node`,
-  `off-center`, `arrow-detached`, `arrow-through-text`, `arrow-pileup`,
-  `column-top`. `minGap` is 16px (was 12px).
+  `off-center`, `arrow-pileup`, `column-top`. `minGap` is 16px (was 12px).
+- Merged with 1.2.0's connector rules: the straight-arrow `arrow-detached` and
+  `arrow-through-text` checks are superseded by `link-gap`, `link-cross` and
+  `link-label`, which also handle elbowed arrows, `free` ends and zone
+  outlines; the self-test fixture now trips every rule of both sets.
 - `scripts/layout_selftest.sh` and the `dev`/`devfail` template chapters
   prove every rule trips on a fixture and none on a clean preview. Chapters
   marked `"dev": true` are skipped by default sweeps, stills and renders.
@@ -31,6 +34,23 @@
   `generate_images.py` (FLUX.2 [pro] on Azure AI Foundry with provenance
   sidecars), `build_credits.py`.
 - Word budgets are calibrated per voice and rate instead of a fixed 155 wpm.
+
+## 1.2.0
+
+Layout rules learned from a human audit of a 120-minute video, each one a
+class of blemish the earlier checks passed:
+
+- `Arrow` routes with `via` elbows and exposes its geometry to the audit.
+- New sweep rules: `link-gap` (dangling arrow ends), `link-short` (stubs
+  under 48px), `link-skew` / `link-diagonal` (orthogonal routing),
+  `link-cross` (arrows through boxes or text), `link-label` (crowded arrow
+  labels), `link-offcenter` (landings centered on box edges), `marker-over`
+  (packets or dots on boxes), `content-bounds` (content leaving its content
+  box), `void` (empty lower third) and `zone-offcenter` (content off center in
+  a Group).
+- `Group` marks its outline as a zone; `SafeArea` marks the content box.
+- `build_srt.py` attaches opening quotes and brackets to the next word.
+- `generate_voiceover.py` drops the sentence copies Azure emits at SSML breaks.
 
 ## 1.1.2
 

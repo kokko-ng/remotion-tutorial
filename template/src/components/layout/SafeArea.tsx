@@ -9,6 +9,7 @@ export const SafeArea: React.FC<{children: React.ReactNode}> = ({children}) => {
   const {width, height} = useVideoConfig();
   return (
     <AbsoluteFill
+      data-content-box
       style={{
         left: width * 0.05,
         top: height * 0.05,

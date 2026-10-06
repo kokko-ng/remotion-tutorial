@@ -7,7 +7,7 @@ second look is a genuinely different look, not a rubber stamp.
 ## Automated layout sweep (run first)
 
 ```bash
-scripts/layout_sweep.sh videos/<slug>          # all chapters
+SWEEP_EVERY_SEC=1 scripts/layout_sweep.sh videos/<slug>   # all chapters
 scripts/layout_sweep.sh videos/<slug> ch03     # one chapter after a fix
 ```
 
@@ -38,6 +38,21 @@ editable in `RULES`:
 | `arrow-pileup` | two arrow heads from different tails land within 10px of each other |
 | `column-top:a+b(Npx)` | side-by-side columns start more than 24px apart vertically (full-width rows are exempt) |
 | `wordFrame: "..." not found` | a reveal cue is not in the narration, so it fires at frame 0 |
+| `link-gap:<arrow>:<end>(Npx)` | an arrow end does not touch a box, image, text or zone outline (10px); `free` opts a flow arrow out |
+| `link-short` | an arrow shorter than 48px reads as a stub; move the boxes apart |
+| `link-skew` / `link-diagonal` | a segment a few degrees off an axis, or any diagonal without `diagonal`; route with `via` elbows |
+| `link-cross` | an arrow runs through a box or text between its ends |
+| `link-label` | an arrow label sits closer than 20px to a box, image or text |
+| `link-offcenter:<box>:<edge>` | arrows landing on that edge are not centered on it (15 percent) |
+| `marker-over` | a visible `data-marker` (packet, pulse dot) sits on a box or text |
+| `content-bounds` | content crosses the left or right edge of `[data-content-box]` |
+| `void:content-ends-at-yN` | the scene never paints below y=760 (`SWEEP_MIN_BOTTOM`) |
+| `zone-offcenter:<zone>` | content held in a zone for 2 s or more is off center (12 / 15 percent) |
+
+Every rule came from a blemish a human reviewer spotted in a rendered frame
+that the earlier checks passed. When a reviewer finds a new class of blemish,
+add a rule for the class (and prove it on a seeded example) rather than
+fixing only the instance.
 
 Every rule except `wordFrame` and `inset` came from a defect a human found in
 a still that the sweep had passed. When that happens again, add the rule, add

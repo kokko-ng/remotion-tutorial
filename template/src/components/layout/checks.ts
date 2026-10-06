@@ -29,10 +29,20 @@ export const RULES = {
   fullWidthFrac: 0.85,
   /** Side-by-side columns start within this many px of each other. */
   columnTopTol: 24,
-  /** An arrow end must be within this many px of an audited box. */
-  arrowSnap: 14,
   /** Two arrow heads must be at least this far apart. */
   arrowTipGap: 10,
+  /** An arrow end must land within this distance of a box, image or text (or a zone outline). */
+  linkEndGap: 10,
+  /** Shortest visible connector; anything shorter reads as a stub. */
+  minLinkLen: 48,
+  /** Segments this close to an axis (degrees) but not on it look like mistakes. */
+  skewDeg: 12,
+  /** Connectors may touch boxes only within this distance of their own endpoints. */
+  linkEndSlack: 16,
+  /** Clearance between a connector label and any box, image or text. */
+  labelGap: 20,
+  /** Arrows landing on one edge of a box must center on it within this fraction of the edge. */
+  offCenterFrac: 0.15,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -94,31 +104,6 @@ const intersects = (a: Rect, b: Rect): boolean =>
 
 const distToRect = (px: number, py: number, r: Rect): number =>
   Math.hypot(Math.max(r.x - px, 0, px - (r.x + r.w)), Math.max(r.y - py, 0, py - (r.y + r.h)));
-
-/** Whether segment a-b intersects rectangle r (Liang-Barsky). */
-const segmentHitsRect = (ax: number, ay: number, bx: number, by: number, r: Rect): boolean => {
-  let t0 = 0;
-  let t1 = 1;
-  const dx = bx - ax;
-  const dy = by - ay;
-  const edges: [number, number][] = [
-    [-dx, ax - r.x],
-    [dx, r.x + r.w - ax],
-    [-dy, ay - r.y],
-    [dy, r.y + r.h - ay],
-  ];
-  for (const [pp, q] of edges) {
-    if (pp === 0) {
-      if (q < 0) return false;
-      continue;
-    }
-    const t = q / pp;
-    if (pp < 0) t0 = Math.max(t0, t);
-    else t1 = Math.min(t1, t);
-    if (t0 > t1) return false;
-  }
-  return true;
-};
 
 /** Text cut off inside an element by an overflow-hidden box (not a deliberate clip). */
 const clippedText = (root: HTMLElement): string | null => {
@@ -220,8 +205,8 @@ const diagramInk = (probe: HTMLElement): DOMRect | null => {
  *   or shows a node box without its name
  * - off-center: the composition (union of everything on screen, a whole
  *   diagram by its drawing) is off the frame centre
- * - arrow-detached / arrow-through-text / arrow-pileup: an arrow end not on a
- *   box, an arrow or its label over text, two heads in one spot
+ * - arrow-pileup: two arrow heads in one spot (detached ends, arrows through
+ *   text and crowded labels are link-gap / link-cross / link-label below)
  * - column-top: side-by-side columns that do not start at the same top
  */
 export const runLayoutChecks = (opts: {
@@ -325,13 +310,6 @@ export const runLayoutChecks = (opts: {
     }
 
     // Arrows (diagram/Arrow exposes data-arrow="x1,y1,x2,y2" in its own svg px).
-    const boxes = audited.map((a) => a.rect);
-    const ink = audited.flatMap((a) =>
-      textRects(a.el).map((t) => {
-        const q = toFrame(t.rect);
-        return {id: a.id, rect: {x: q.x + 3, y: q.y + 3, w: Math.max(0, q.w - 6), h: Math.max(0, q.h - 6)}};
-      }),
-    );
     const tips: {x: number; y: number; from: string}[] = [];
     for (const svgEl of Array.from(scope.querySelectorAll<SVGSVGElement>('svg[data-arrow]'))) {
       if (svgEl.dataset.arrowDrawn !== '1') continue;
@@ -342,16 +320,9 @@ export const runLayoutChecks = (opts: {
       const sy0 = o.y + ay1 * k;
       const ex = o.x + ax2 * k;
       const ey = o.y + ay2 * k;
-      const near = (px: number, py: number) => boxes.some((b) => distToRect(px, py, b) <= R.arrowSnap);
-      if (!near(sx0, sy0) || !near(ex, ey)) add(`arrow-detached:${Math.round(sx0)},${Math.round(sy0)}`, {x: Math.min(sx0, ex), y: Math.min(sy0, ey), w: Math.abs(ex - sx0) + 1, h: Math.abs(ey - sy0) + 1});
-      const hit = ink.find((t) => t.rect.w > 0 && segmentHitsRect(sx0, sy0, ex, ey, t.rect));
-      if (hit) add(`arrow-through-text:${hit.id}`, hit.rect);
-      const label = svgEl.parentElement?.querySelector<HTMLElement>('[data-arrow-label]');
-      if (label) {
-        const lr = toFrame(label.getBoundingClientRect());
-        const over = audited.find((a) => intersects(lr, a.rect));
-        if (over) add(`arrow-through-text:${over.id}(label)`, lr);
-      }
+      // Detached ends, arrows through text and crowded labels are covered by the
+      // link-gap, link-cross and link-label rules (EXTRA_RULES), which also
+      // handle elbowed arrows, free ends and zone outlines.
       const from = `${Math.round(sx0)},${Math.round(sy0)}`;
       if (tips.some((t) => t.from !== from && Math.hypot(t.x - ex, t.y - ey) < R.arrowTipGap)) {
         add(`arrow-pileup:${Math.round(ex)},${Math.round(ey)}`, {x: ex - 6, y: ey - 6, w: 12, h: 12});
@@ -428,5 +399,285 @@ export const runLayoutChecks = (opts: {
     if (over) add(`overflow:${name}`, frameRect);
     else if (tightInset) add(`inset:${name}`, frameRect);
   });
+  for (const rule of EXTRA_RULES) rule({scope, add, toFrame, scale});
   return findings;
+};
+
+/** Context handed to each additional rule. */
+export interface RuleCtx {
+  scope: Element;
+  add: (id: string, rect: Rect) => void;
+  toFrame: (r: DOMRect) => Rect;
+  /** screen px per composition px */
+  scale: number;
+}
+
+const isZone = (el: HTMLElement) => (el.dataset.fit ?? '').startsWith('zone:');
+const distTo = (x: number, y: number, r: DOMRect) =>
+  Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+const linkEls = (scope: Element) =>
+  Array.from(scope.querySelectorAll<SVGGeometryElement>('[data-link]')).filter((el) => !hiddenByAncestor(el));
+/** Bounded boxes that are actually on screen (premounted, hidden sequences excluded). */
+const fitEls = (scope: Element) =>
+  Array.from(scope.querySelectorAll<HTMLElement>('[data-fit]')).filter((el) => !hiddenByAncestor(el));
+const imgEls = (scope: Element) => Array.from(scope.querySelectorAll('img')).filter((el) => !hiddenByAncestor(el));
+/** An element's rect clipped by every overflow-hidden ancestor (what is actually painted). */
+const paintedRect = (el: Element): DOMRect | null => {
+  let r = el.getBoundingClientRect();
+  for (let a = el.parentElement; a; a = a.parentElement) {
+    const cs = getComputedStyle(a);
+    if (cs.overflow === 'visible' && cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    const c = a.getBoundingClientRect();
+    const l = Math.max(r.left, c.left), tp = Math.max(r.top, c.top), rr = Math.min(r.right, c.right), b = Math.min(r.bottom, c.bottom);
+    if (rr <= l || b <= tp) return null;
+    r = new DOMRect(l, tp, rr - l, b - tp);
+  }
+  return r;
+};
+/** A connector's points (data-points, in its SVG's user space) mapped to screen coordinates. */
+const linkPoints = (el: SVGGeometryElement): {x: number; y: number}[] => {
+  const pts: [number, number][] = JSON.parse(el.getAttribute('data-points') ?? '[]');
+  const m = el.getScreenCTM();
+  return m ? pts.map(([x, y]) => ({x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f})) : [];
+};
+
+/** Additional rules, each a self-contained check (see README of each rule below). */
+const EXTRA_RULES: ((c: RuleCtx) => void)[] = [];
+
+/** link-gap: both ends of every connector touch something, unless declared free. */
+const linkGap = ({scope, add, scale}: RuleCtx) => {
+  const targets: DOMRect[] = [];
+  const zones: DOMRect[] = [];
+  fitEls(scope).forEach((el) => (isZone(el) ? zones : targets).push(el.getBoundingClientRect()));
+  imgEls(scope).forEach((el) => targets.push(el.getBoundingClientRect()));
+  for (const t of textRects(scope)) targets.push(t.rect);
+  linkEls(scope).forEach((el, k) => {
+    const pts = linkPoints(el);
+    if (pts.length < 2) return;
+    const free = el.getAttribute('data-free') ?? '';
+    const ends: [string, {x: number; y: number}][] = [['start', pts[0]], ['end', pts[pts.length - 1]]];
+    for (const [which, {x, y}] of ends) {
+      if (free === 'both' || free === which) continue;
+      // a zone counts only by its outline
+      const zoneEdge = (r: DOMRect) =>
+        x >= r.left && x <= r.right && y >= r.top && y <= r.bottom
+          ? Math.min(x - r.left, r.right - x, y - r.top, r.bottom - y)
+          : distTo(x, y, r);
+      const near = Math.min(Infinity, ...targets.map((r) => distTo(x, y, r)), ...zones.map(zoneEdge));
+      if (near > RULES.linkEndGap * scale) {
+        add(`link-gap:${el.getAttribute('data-link')}#${k}:${which}(${Math.round(near / scale)}px)`, {x, y, w: 1, h: 1});
+      }
+    }
+  });
+};
+EXTRA_RULES.push(linkGap);
+
+/** link-short: connectors are at least RULES.minLinkLen long. */
+const linkShort = ({scope, add, toFrame, scale}: RuleCtx) => {
+  linkEls(scope).forEach((el, k) => {
+    const pts = linkPoints(el);
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    if (pts.length >= 2 && len < RULES.minLinkLen * scale) {
+      add(`link-short:${el.getAttribute('data-link')}#${k}(${Math.round(len / scale)}px)`, toFrame(el.getBoundingClientRect()));
+    }
+  });
+};
+EXTRA_RULES.push(linkShort);
+
+/** link-skew / link-diagonal: segments are horizontal or vertical. */
+const linkGeometry = ({scope, add, toFrame}: RuleCtx) => {
+  linkEls(scope).forEach((el, k) => {
+    const pts: [number, number][] = JSON.parse(el.getAttribute('data-points') ?? '[]');
+    for (let i = 1; i < pts.length; i++) {
+      const dx = Math.abs(pts[i][0] - pts[i - 1][0]);
+      const dy = Math.abs(pts[i][1] - pts[i - 1][1]);
+      if (dx <= 1.5 || dy <= 1.5) continue;
+      const ang = (Math.atan2(Math.min(dx, dy), Math.max(dx, dy)) * 180) / Math.PI;
+      const r = toFrame(el.getBoundingClientRect());
+      const name = `${el.getAttribute('data-link')}#${k}`;
+      if (ang < RULES.skewDeg) add(`link-skew:${name}(${ang.toFixed(1)}deg)`, r);
+      else if (!el.getAttribute('data-diagonal')) add(`link-diagonal:${name}`, r);
+      break;
+    }
+  });
+};
+EXTRA_RULES.push(linkGeometry);
+
+/** link-cross: nothing but the endpoints may touch a box or text. */
+const linkCross = ({scope, add, toFrame, scale}: RuleCtx) => {
+  const obstacles: DOMRect[] = [];
+  fitEls(scope).forEach((el) => {
+    if (!isZone(el)) obstacles.push(el.getBoundingClientRect());
+  });
+  imgEls(scope).forEach((el) => obstacles.push(el.getBoundingClientRect()));
+  for (const t of textRects(scope)) obstacles.push(t.rect);
+  linkEls(scope).forEach((el, k) => {
+    const pts = linkPoints(el);
+    if (pts.length < 2) return;
+    const box = el.getBoundingClientRect();
+    const own = obstacles.filter(
+      (o) => !(box.left >= o.left - 1 && box.right <= o.right + 1 && box.top >= o.top - 1 && box.bottom <= o.bottom + 1),
+    );
+    const segs = pts.slice(1).map((q, i) => ({a: pts[i], b: q, len: Math.hypot(q.x - pts[i].x, q.y - pts[i].y)}));
+    const total = segs.reduce((s, g) => s + g.len, 0);
+    const slack = RULES.linkEndSlack * scale;
+    let walked = 0;
+    for (const g of segs) {
+      for (let s = 0; s <= g.len; s += 6 * scale) {
+        const at = walked + s;
+        if (at < slack || at > total - slack) continue;
+        const f = g.len ? s / g.len : 0;
+        const x = g.a.x + (g.b.x - g.a.x) * f;
+        const y = g.a.y + (g.b.y - g.a.y) * f;
+        const hit = own.find((o) => x > o.left + 3 && x < o.right - 3 && y > o.top + 3 && y < o.bottom - 3);
+        if (hit) {
+          add(`link-cross:${el.getAttribute('data-link')}#${k}`, toFrame(hit));
+          return;
+        }
+      }
+      walked += g.len;
+    }
+  });
+};
+EXTRA_RULES.push(linkCross);
+
+/** link-label: labels on connectors keep RULES.labelGap clear of boxes, images and text. */
+const linkLabel = ({scope, add, toFrame, scale}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement>('[data-link-label]').forEach((lab, k) => {
+    const lr = lab.getBoundingClientRect();
+    const g = RULES.labelGap * scale;
+    const encloses = (o: DOMRect) => o.left <= lr.left + 1 && o.right >= lr.right - 1 && o.top <= lr.top + 1 && o.bottom >= lr.bottom - 1;
+    const near = (o: DOMRect) => o.left < lr.right + g && o.right > lr.left - g && o.top < lr.bottom + g && o.bottom > lr.top - g;
+    const boxes: DOMRect[] = [];
+    fitEls(scope).forEach((el) => {
+      if (!isZone(el)) boxes.push(el.getBoundingClientRect());
+    });
+    imgEls(scope).forEach((el) => boxes.push(el.getBoundingClientRect()));
+    for (const t of textRects(scope)) boxes.push(t.rect);
+    const own = textRects(lab).map((x) => x.rect);
+    const hit = boxes.find((o) => !encloses(o) && near(o) && !own.some((w) => w.left === o.left && w.top === o.top));
+    if (hit) add(`link-label:${(lab.textContent ?? '').trim().slice(0, 24).replace(/\s+/g, '_')}#${k}`, toFrame(lr));
+  });
+};
+EXTRA_RULES.push(linkLabel);
+
+/** link-offcenter: landings on each box edge are centered on that edge. */
+const linkOffCenter = ({scope, add, toFrame, scale}: RuleCtx) => {
+  const boxes: {el: HTMLElement; r: DOMRect}[] = [];
+  fitEls(scope).forEach((el) => {
+    if (!isZone(el)) boxes.push({el, r: el.getBoundingClientRect()});
+  });
+  const hits = new Map<string, {r: DOMRect; edge: string; pts: number[]; name: string}>();
+  const tol = RULES.linkEndGap * scale;
+  linkEls(scope).forEach((el) => {
+    const pts = linkPoints(el);
+    if (pts.length < 2) return;
+    for (const {x, y} of [pts[0], pts[pts.length - 1]]) {
+      for (const b of boxes) {
+        const r = b.r;
+        const edges: [string, number, number, boolean][] = [
+          ['left', Math.abs(x - r.left), y, y >= r.top - tol && y <= r.bottom + tol],
+          ['right', Math.abs(x - r.right), y, y >= r.top - tol && y <= r.bottom + tol],
+          ['top', Math.abs(y - r.top), x, x >= r.left - tol && x <= r.right + tol],
+          ['bottom', Math.abs(y - r.bottom), x, x >= r.left - tol && x <= r.right + tol],
+        ];
+        for (const [edge, d, along, within] of edges) {
+          if (d > tol || !within) continue;
+          const key = `${b.el.dataset.fit}|${edge}`;
+          const e = hits.get(key) ?? {r, edge, pts: [], name: b.el.dataset.fit ?? 'box'};
+          e.pts.push(along);
+          hits.set(key, e);
+        }
+      }
+    }
+  });
+  hits.forEach((h) => {
+    const vertical = h.edge === 'left' || h.edge === 'right';
+    const lo = vertical ? h.r.top : h.r.left;
+    const len = vertical ? h.r.height : h.r.width;
+    const centroid = h.pts.reduce((a, b) => a + b, 0) / h.pts.length;
+    if (Math.abs(centroid - (lo + len / 2)) > RULES.offCenterFrac * len) add(`link-offcenter:${h.name}:${h.edge}`, toFrame(h.r));
+  });
+};
+EXTRA_RULES.push(linkOffCenter);
+
+/** marker-over: visible [data-marker] elements do not overlap boxes or text. */
+const markerOver = ({scope, add, toFrame}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement | SVGElement>('[data-marker]').forEach((mk, k) => {
+    if (hiddenByAncestor(mk)) return;
+    const mr = mk.getBoundingClientRect();
+    if (mr.width === 0 && mr.height === 0) return;
+    const cs = getComputedStyle(mk);
+    if (parseFloat(cs.opacity || '1') < 0.5 || cs.visibility === 'hidden') return;
+    const over = (o: DOMRect) => o.left < mr.right && o.right > mr.left && o.top < mr.bottom && o.bottom > mr.top;
+    let hit = false;
+    fitEls(scope).forEach((el) => {
+      if (hit || isZone(el) || el.contains(mk)) return;
+      const r = el.getBoundingClientRect();
+      const wrapsDiagram = r.width > 600 && r.height > 300;
+      if (!wrapsDiagram && over(r)) hit = true;
+    });
+    if (!hit) for (const t of textRects(scope)) if (over(t.rect)) { hit = true; break; }
+    if (hit) add(`marker-over:${mk.getAttribute('data-marker') || k}`, toFrame(mr));
+  });
+};
+EXTRA_RULES.push(markerOver);
+
+/** content-bounds: nothing crosses the left or right edge of [data-content-box]. */
+const contentBounds = ({scope, add, toFrame, scale}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement>('[data-content-box]').forEach((cb) => {
+    const box = cb.getBoundingClientRect();
+    const tol = 2 * scale;
+    const outside = (r: DOMRect) => r.width > 0 && (r.right > box.right + tol || r.left < box.left - tol);
+    for (const t of textRects(cb)) if (outside(t.rect)) add(`content-bounds:text@${Math.round(t.rect.x)}`, toFrame(t.rect));
+    cb.querySelectorAll<Element>('[data-fit],img,svg:not(:has([data-link])),[data-link]').forEach((el, k) => {
+      if (hiddenByAncestor(el)) return;
+      const r = paintedRect(el);
+      if (r && outside(r)) add(`content-bounds:${el.getAttribute('data-fit') ?? el.tagName.toLowerCase()}#${k}`, toFrame(r));
+    });
+  });
+};
+EXTRA_RULES.push(contentBounds);
+
+/**
+ * Zone balance data: for each zone ([data-fit^="zone:"]), the union of content
+ * fully inside it and how far that union's center sits from the zone
+ * interior's center, as fractions of the interior. The interior starts below
+ * the zone's title: data-zone-inset (px) when set, else the first child.
+ * The sweep flags any zone whose content stays off center for 2 s or more.
+ */
+export const zoneBalance = (scope: Element): {name: string; count: number; dx: number; dy: number}[] => {
+  const out: {name: string; count: number; dx: number; dy: number}[] = [];
+  const items: DOMRect[] = [];
+  scope.querySelectorAll<HTMLElement>('[data-fit]:not([data-fit^="zone:"]),img').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) items.push(r);
+  });
+  scope.querySelectorAll<HTMLElement>('[data-fit^="zone:"]').forEach((z) => {
+    const zr = z.getBoundingClientRect();
+    const inset = z.dataset.zoneInset ? parseFloat(z.dataset.zoneInset) * (zr.height / (z.offsetHeight || zr.height)) : null;
+    const first = z.firstElementChild as HTMLElement | null;
+    const top = inset !== null ? zr.top + inset : first ? Math.max(zr.top, first.getBoundingClientRect().bottom) : zr.top;
+    const inside = items.filter(
+      (r) => r.left >= zr.left - 1 && r.right <= zr.right + 1 && r.top >= zr.top - 1 && r.bottom <= zr.bottom + 1 &&
+        !(r.width >= zr.width - 2 && r.height >= zr.height - 2),
+    );
+    const outer = inside.filter((r) => !inside.some((o) => o !== r && o.left <= r.left && o.right >= r.right && o.top <= r.top && o.bottom >= r.bottom));
+    if (!outer.length) return;
+    const l = Math.min(...outer.map((r) => r.left));
+    const rr = Math.max(...outer.map((r) => r.right));
+    const t = Math.min(...outer.map((r) => r.top));
+    const b = Math.max(...outer.map((r) => r.bottom));
+    const w = zr.width;
+    const h = zr.bottom - top;
+    if (w <= 0 || h <= 0) return;
+    out.push({
+      name: (z.dataset.fit ?? 'zone').replace(/\s+/g, '_'),
+      count: outer.length,
+      dx: ((l + rr) / 2 - (zr.left + zr.right) / 2) / w,
+      dy: ((t + b) / 2 - (top + zr.bottom) / 2) / h,
+    });
+  });
+  return out;
 };
