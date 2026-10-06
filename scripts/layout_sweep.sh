@@ -25,7 +25,11 @@ for ch in $CHS; do
     grep -m3 -i "error" "$OUT/$ch.log" | sed 's/^/  /'
     continue
   fi
-  hits=$( (grep -o '\[layout\] [^ ]* f[0-9]* [^ "]*' "$OUT/$ch.log"; \
+  # Scene-level empty-space rule: a scene whose content never reaches below
+  # SWEEP_MIN_BOTTOM (default y=760, about two thirds down the frame) leaves
+  # the lower third dead on every frame.
+  voids=$(grep -o '\[density\] [^ ]* f[0-9]* [0-9]* b[0-9]*' "$OUT/$ch.log" | awk -v min="${SWEEP_MIN_BOTTOM:-760}" '{sub("b","",$5); if ($5+0 > m[$2]+0) m[$2]=$5} END {for (s in m) if (m[s] < min) print "[layout] " s " f0 void:content-ends-at-y" m[s]}')
+  hits=$( (echo "$voids" | grep . ; grep -o '\[layout\] [^ ]* f[0-9]* [^ "]*' "$OUT/$ch.log"; \
            grep -o 'wordFrame: "[^"]*" (occurrence [0-9]*) not found' "$OUT/$ch.log") | sort -u)
   if [ -n "$hits" ]; then
     [ $status -eq 0 ] && status=1
