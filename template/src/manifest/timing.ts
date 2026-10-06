@@ -23,6 +23,9 @@ const stripPunct = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()
 /**
  * Frame (scene-relative) at which the nth occurrence of a word, or of a
  * multi-word phrase ("encryption at host"), starts being spoken.
+ * Azure sometimes returns several spoken words as one boundary token
+ * ("99.99 percent", "72 hours"), so tokens are split on spaces and matched on
+ * the normalized character stream: "72 hours" and "72hours" both resolve.
  * Returns 0 and warns if not found, so a typo degrades gracefully; the layout
  * sweep reports every such warning.
  */
@@ -32,20 +35,25 @@ export const wordFrame = (
   occurrence = 1,
 ): number => {
   if (!words) return 0;
-  const parts = query.split(/\s+/).map(stripPunct).filter(Boolean);
-  const spoken = words.filter((w) => !w.punct);
+  const toks = words
+    .filter((w) => !w.punct)
+    .flatMap((w) => w.text.split(/\s+/).filter(Boolean).map((part) => ({...w, text: part})));
+  const keys = toks.map((w) => stripPunct(w.text));
+  const target = stripPunct(query);
   let seen = 0;
-  for (let i = 0; i + parts.length <= spoken.length; i++) {
-    let ok = true;
-    for (let j = 0; j < parts.length; j++) {
-      if (stripPunct(spoken[i + j].text) !== parts[j]) {
-        ok = false;
-        break;
+  if (target) {
+    for (let i = 0; i < keys.length; i++) {
+      if (!keys[i] || !target.startsWith(keys[i])) continue;
+      let acc = '';
+      for (let j = i; j < keys.length && acc.length < target.length; j++) {
+        acc += keys[j];
+        if (acc === target) {
+          seen += 1;
+          if (seen === occurrence) return msToFrame(toks[i].startMs, manifest.fps);
+          break;
+        }
+        if (!target.startsWith(acc)) break;
       }
-    }
-    if (ok) {
-      seen += 1;
-      if (seen === occurrence) return msToFrame(spoken[i].startMs, manifest.fps);
     }
   }
   // eslint-disable-next-line no-console

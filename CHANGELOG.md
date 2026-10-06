@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.2
+
+- `wordFrame` matches across multi-word boundary tokens (Azure returns some
+  numbers with units as one token, "99.99 percent"), so such cues no longer
+  silently resolve to frame 0.
+- Chapter renders each scene only after its word timings load (`SceneGate`),
+  so premounting scenes no longer flash every reveal at frame 0 or produce
+  false overlaps in the sweep.
+- New `scripts/export_stills.sh`: one full-resolution still per scene at its
+  fullest moment (density logged by the layout audit), for a user audit
+  before rendering.
+
 ## 1.1.1
 
 - `generate_voiceover.py`: SSML `<sub alias>` word boundaries are mapped back

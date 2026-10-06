@@ -33,6 +33,18 @@ render is never reported as clean). Fix every finding, rerun the chapter,
 and only then move to the stills. Prove the sweep on a new component by
 seeding a too-narrow box once and confirming it is flagged.
 
+## Stills for a human audit
+
+```bash
+scripts/export_stills.sh videos/<slug>        # stills/chNN/<sceneId>.png
+```
+
+One still per scene at its fullest moment: the sweep logs a density score
+(text runs, images, audited blocks) per sampled second, and the densest frame
+(latest on ties) is rendered at full resolution without overlays. Scenes that
+cut between shots show their busiest shot. Hand `stills/` to the user before
+rendering.
+
 ## Sampling
 
 `scripts/review_stills.py` renders stills per scene at 15/40/65/90 percent of
