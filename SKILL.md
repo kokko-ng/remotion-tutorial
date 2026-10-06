@@ -164,6 +164,14 @@ Write one component per scene in `src/scenes/`, register it in
   with `data-fit="<name>"` so the layout sweep checks that its text fits and
   keeps its inset. Node, Callout and CodePanel already do.
 - `wordFrame` accepts phrases (`wordFrame(words, 'encryption at host')`).
+- Connectors (`Arrow`): route orthogonally with `via` elbows; both ends must
+  touch what they connect (`free="end"` only for deliberate flow arrows);
+  at least 48px long; never through a box or text; labels 20px clear of
+  boxes; arrows landing on one edge of a box center on it.
+- Anything that moves along a diagram (packets, dots, cursors) carries
+  `data-marker` and travels on connector segments only, never on a box.
+- Content inside a `Group` (a zone) stays centered in it whenever it holds
+  still for 2 seconds; every scene's content reaches below y=760.
 
 Run `npx tsc --noEmit` in the project until clean.
 
@@ -177,11 +185,14 @@ python3 scripts/review_stills.py --project videos/<slug>            # pass 1
 python3 scripts/review_stills.py --project videos/<slug> --shift 5 --debug   # pass 2
 ```
 
-The layout sweep runs first and must exit 0. It renders every scene every 2
-seconds (plus its last frame) with the layout audit on and fails on any text
-overflowing its box, text closer than 8px to a bordered edge, blocks
-overlapping or closer than 12px, anything outside the safe area or in the
-subtitle band, and any `wordFrame` cue that is not in the narration. Stills
+The layout sweep runs first and must exit 0 at 1-second sampling
+(`SWEEP_EVERY_SEC=1`). It renders every scene with the layout audit on and
+fails on text overflowing its box or too close to a bordered edge, blocks
+overlapping or closer than 12px, anything outside the safe area, the content
+box or in the subtitle band, connector problems (dangling ends, stubs, skewed
+or diagonal segments, crossing boxes, crowded labels, off-center landings),
+markers sitting on boxes, off-center zones, scenes that leave the lower third
+empty, and any `wordFrame` cue that is not in the narration. Stills
 sample 4 to 5 frames per scene; the sweep covers the rest. Before rendering,
 `scripts/export_stills.sh videos/<slug>` writes one full-resolution still per
 scene (its fullest moment) to `stills/` for the user's visual audit.
