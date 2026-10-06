@@ -34,7 +34,8 @@ export const Callout: React.FC<{
           transform: `scale(${scale})`,
           background: theme.bgPanel,
           borderRadius: theme.radius,
-          borderLeft: theme.stroke > 0 ? `${Math.max(3, theme.stroke)}px solid ${color}` : undefined,
+          // a full 1px border: side-stripe accents above 1px are a known AI-UI tell
+          border: theme.stroke > 0 ? `1px solid ${color}88` : undefined,
           boxShadow: theme.softShadow ?? undefined,
           padding: '30px 38px',
         }}

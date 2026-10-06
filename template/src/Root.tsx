@@ -7,6 +7,7 @@ import {
   chapterDurationFrames,
   manifest,
   totalDurationFrames,
+  videoChapters,
 } from './manifest/timing';
 
 /**
@@ -20,7 +21,7 @@ const FullVideo: React.FC<Record<string, unknown> & {debugLayout?: boolean}> = (
   let offset = 0;
   return (
     <>
-      {manifest.chapters.map((ch) => {
+      {videoChapters().map((ch) => {
         const from = offset;
         const frames = chapterDurationFrames(ch.id);
         offset += frames;

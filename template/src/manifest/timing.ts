@@ -15,8 +15,11 @@ export const chapterScenes = (chapterId: string): SceneEntry[] =>
 export const chapterDurationFrames = (chapterId: string): number =>
   chapterScenes(chapterId).reduce((sum, s) => sum + sceneFrames(s, manifest.fps), 0);
 
+/** Chapters that make up the video (dev chapters excluded). */
+export const videoChapters = () => manifest.chapters.filter((ch) => !ch.dev);
+
 export const totalDurationFrames = (): number =>
-  manifest.chapters.reduce((sum, ch) => sum + chapterDurationFrames(ch.id), 0);
+  videoChapters().reduce((sum, ch) => sum + chapterDurationFrames(ch.id), 0);
 
 const stripPunct = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 

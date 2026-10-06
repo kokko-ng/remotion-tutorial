@@ -62,7 +62,6 @@ export const CodePanel: React.FC<{
               style={{
                 display: 'flex',
                 background: highlighted ? `${theme.accent}22` : 'transparent',
-                borderLeft: highlighted ? `3px solid ${theme.accent}` : '3px solid transparent',
                 opacity: revealed ? (dimmed ? 0.45 : 1) : 0,
                 padding: '0 26px',
               }}
