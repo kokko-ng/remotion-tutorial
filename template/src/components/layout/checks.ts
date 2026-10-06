@@ -25,6 +25,8 @@ export const RULES = {
   minLinkLen: 48,
   /** Segments this close to an axis (degrees) but not on it look like mistakes. */
   skewDeg: 12,
+  /** Connectors may touch boxes only within this distance of their own endpoints. */
+  linkEndSlack: 16,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -234,3 +236,41 @@ const linkGeometry = ({scope, add, toFrame}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkGeometry);
+
+/** link-cross: nothing but the endpoints may touch a box or text. */
+const linkCross = ({scope, add, toFrame, scale}: RuleCtx) => {
+  const obstacles: DOMRect[] = [];
+  scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+    if (!isZone(el)) obstacles.push(el.getBoundingClientRect());
+  });
+  scope.querySelectorAll('img').forEach((el) => obstacles.push(el.getBoundingClientRect()));
+  for (const t of textRects(scope)) obstacles.push(t.rect);
+  linkEls(scope).forEach((el, k) => {
+    const pts = linkPoints(el);
+    if (pts.length < 2) return;
+    const box = el.getBoundingClientRect();
+    const own = obstacles.filter(
+      (o) => !(box.left >= o.left - 1 && box.right <= o.right + 1 && box.top >= o.top - 1 && box.bottom <= o.bottom + 1),
+    );
+    const segs = pts.slice(1).map((q, i) => ({a: pts[i], b: q, len: Math.hypot(q.x - pts[i].x, q.y - pts[i].y)}));
+    const total = segs.reduce((s, g) => s + g.len, 0);
+    const slack = RULES.linkEndSlack * scale;
+    let walked = 0;
+    for (const g of segs) {
+      for (let s = 0; s <= g.len; s += 6 * scale) {
+        const at = walked + s;
+        if (at < slack || at > total - slack) continue;
+        const f = g.len ? s / g.len : 0;
+        const x = g.a.x + (g.b.x - g.a.x) * f;
+        const y = g.a.y + (g.b.y - g.a.y) * f;
+        const hit = own.find((o) => x > o.left + 3 && x < o.right - 3 && y > o.top + 3 && y < o.bottom - 3);
+        if (hit) {
+          add(`link-cross:${el.getAttribute('data-link')}#${k}`, toFrame(hit));
+          return;
+        }
+      }
+      walked += g.len;
+    }
+  });
+};
+EXTRA_RULES.push(linkCross);
