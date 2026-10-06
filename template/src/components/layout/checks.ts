@@ -374,3 +374,45 @@ const contentBounds = ({scope, add, toFrame, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(contentBounds);
+
+/**
+ * Zone balance data: for each zone ([data-fit^="zone:"]), the union of content
+ * fully inside it and how far that union's center sits from the zone
+ * interior's center, as fractions of the interior. The interior starts below
+ * the zone's title: data-zone-inset (px) when set, else the first child.
+ * The sweep flags any zone whose content stays off center for 2 s or more.
+ */
+export const zoneBalance = (scope: Element): {name: string; count: number; dx: number; dy: number}[] => {
+  const out: {name: string; count: number; dx: number; dy: number}[] = [];
+  const items: DOMRect[] = [];
+  scope.querySelectorAll<HTMLElement>('[data-fit]:not([data-fit^="zone:"]),img').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) items.push(r);
+  });
+  scope.querySelectorAll<HTMLElement>('[data-fit^="zone:"]').forEach((z) => {
+    const zr = z.getBoundingClientRect();
+    const inset = z.dataset.zoneInset ? parseFloat(z.dataset.zoneInset) * (zr.height / (z.offsetHeight || zr.height)) : null;
+    const first = z.firstElementChild as HTMLElement | null;
+    const top = inset !== null ? zr.top + inset : first ? Math.max(zr.top, first.getBoundingClientRect().bottom) : zr.top;
+    const inside = items.filter(
+      (r) => r.left >= zr.left - 1 && r.right <= zr.right + 1 && r.top >= zr.top - 1 && r.bottom <= zr.bottom + 1 &&
+        !(r.width >= zr.width - 2 && r.height >= zr.height - 2),
+    );
+    const outer = inside.filter((r) => !inside.some((o) => o !== r && o.left <= r.left && o.right >= r.right && o.top <= r.top && o.bottom >= r.bottom));
+    if (!outer.length) return;
+    const l = Math.min(...outer.map((r) => r.left));
+    const rr = Math.max(...outer.map((r) => r.right));
+    const t = Math.min(...outer.map((r) => r.top));
+    const b = Math.max(...outer.map((r) => r.bottom));
+    const w = zr.width;
+    const h = zr.bottom - top;
+    if (w <= 0 || h <= 0) return;
+    out.push({
+      name: (z.dataset.fit ?? 'zone').replace(/\s+/g, '_'),
+      count: outer.length,
+      dx: ((l + rr) / 2 - (zr.left + zr.right) / 2) / w,
+      dy: ((t + b) / 2 - (top + zr.bottom) / 2) / h,
+    });
+  });
+  return out;
+};
