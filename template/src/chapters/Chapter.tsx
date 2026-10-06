@@ -15,9 +15,10 @@ import type {WordToken} from '../manifest/types';
  * wordFrame cue resolves to 0 while a scene premounts, so all reveals flash
  * on at once and the layout sweep reports false overlaps.
  */
-const SceneGate: React.FC<{sceneId: string; children: React.ReactNode}> = ({sceneId, children}) => {
-  const words = useJson<WordToken[]>(`audio/${sceneId}.words.json`);
-  return words ? <>{children}</> : null;
+const SceneGate: React.FC<{sceneId: string; silent: boolean; children: React.ReactNode}> = ({sceneId, silent, children}) => {
+  const words = useJson<WordToken[]>(silent ? null : `audio/${sceneId}.words.json`);
+  // a scene with no narration (a dev fixture or preview) renders at once
+  return silent || words ? <>{children}</> : null;
 };
 
 export interface ChapterProps extends Record<string, unknown> {
@@ -65,7 +66,7 @@ export const Chapter: React.FC<ChapterProps> = ({chapterId, debugLayout = false,
               {audio && scene.durationSec > 0 ? (
                 <Audio src={staticFile(`audio/${scene.id}.wav`)} premountFor={manifest.fps} />
               ) : null}
-              <SceneGate sceneId={scene.id}>
+              <SceneGate sceneId={scene.id} silent={scene.durationSec === 0}>
                 <SceneComp sceneId={scene.id} />
               </SceneGate>
               <Subtitles sceneId={scene.id} />

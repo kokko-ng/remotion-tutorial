@@ -57,7 +57,8 @@ export const Arrow: React.FC<{
 
   return (
     <div style={{position: 'absolute', left: minX, top: minY, width: bw, height: bh, pointerEvents: 'none'}}>
-      <svg width={bw} height={bh}>
+      {/* data-arrow: endpoints in this svg's px, read by the arrow layout checks */}
+      <svg width={bw} height={bh} data-arrow={`${ax1},${ay1},${ax2},${ay2}`} data-arrow-drawn={p > 0.92 ? '1' : undefined}>
         <line
           x1={ax1}
           y1={ay1}
@@ -85,6 +86,7 @@ export const Arrow: React.FC<{
       </svg>
       {label ? (
         <div
+          data-arrow-label
           style={{
             position: 'absolute',
             left: (ax1 + ax2) / 2 + labelOffset.dx,
