@@ -29,6 +29,8 @@ export const RULES = {
   linkEndSlack: 16,
   /** Clearance between a connector label and any box, image or text. */
   labelGap: 20,
+  /** Arrows landing on one edge of a box must center on it within this fraction of the edge. */
+  offCenterFrac: 0.15,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -296,3 +298,43 @@ const linkLabel = ({scope, add, toFrame, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkLabel);
+
+/** link-offcenter: landings on each box edge are centered on that edge. */
+const linkOffCenter = ({scope, add, toFrame, scale}: RuleCtx) => {
+  const boxes: {el: HTMLElement; r: DOMRect}[] = [];
+  scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+    if (!isZone(el)) boxes.push({el, r: el.getBoundingClientRect()});
+  });
+  const hits = new Map<string, {r: DOMRect; edge: string; pts: number[]; name: string}>();
+  const tol = RULES.linkEndGap * scale;
+  linkEls(scope).forEach((el) => {
+    const pts = linkPoints(el);
+    if (pts.length < 2) return;
+    for (const {x, y} of [pts[0], pts[pts.length - 1]]) {
+      for (const b of boxes) {
+        const r = b.r;
+        const edges: [string, number, number, boolean][] = [
+          ['left', Math.abs(x - r.left), y, y >= r.top - tol && y <= r.bottom + tol],
+          ['right', Math.abs(x - r.right), y, y >= r.top - tol && y <= r.bottom + tol],
+          ['top', Math.abs(y - r.top), x, x >= r.left - tol && x <= r.right + tol],
+          ['bottom', Math.abs(y - r.bottom), x, x >= r.left - tol && x <= r.right + tol],
+        ];
+        for (const [edge, d, along, within] of edges) {
+          if (d > tol || !within) continue;
+          const key = `${b.el.dataset.fit}|${edge}`;
+          const e = hits.get(key) ?? {r, edge, pts: [], name: b.el.dataset.fit ?? 'box'};
+          e.pts.push(along);
+          hits.set(key, e);
+        }
+      }
+    }
+  });
+  hits.forEach((h) => {
+    const vertical = h.edge === 'left' || h.edge === 'right';
+    const lo = vertical ? h.r.top : h.r.left;
+    const len = vertical ? h.r.height : h.r.width;
+    const centroid = h.pts.reduce((a, b) => a + b, 0) / h.pts.length;
+    if (Math.abs(centroid - (lo + len / 2)) > RULES.offCenterFrac * len) add(`link-offcenter:${h.name}:${h.edge}`, toFrame(h.r));
+  });
+};
+EXTRA_RULES.push(linkOffCenter);
