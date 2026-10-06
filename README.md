@@ -23,9 +23,11 @@ What the skill enforces:
   returns per-word timestamps; visual reveals are keyed to the exact frame a
   word or phrase is spoken.
 - An automated layout sweep over the whole video: every scene is rendered
-  every 2 seconds with a layout audit that fails on text overflowing its box,
-  cramped insets and gaps, safe-margin and subtitle-band violations, and
-  missing word cues.
+  every second with a layout audit that fails on text overflowing its box,
+  cramped insets and gaps, safe-margin and subtitle-band violations,
+  connector blemishes (dangling ends, stubs, skewed lines, arrows through
+  boxes, crowded labels, off-center landings), markers on boxes, off-center
+  zones, an empty lower third, and missing word cues.
 - A mandatory two-pass aesthetic review: rendered stills are visually
   inspected against a checklist, then re-inspected at shifted timestamps with
   a layout-audit overlay that flags overlaps and margin violations in red.

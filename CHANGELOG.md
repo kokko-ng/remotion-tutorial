@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0
+
+Layout rules learned from a human audit of a 120-minute video, each one a
+class of blemish the earlier checks passed:
+
+- `Arrow` routes with `via` elbows and exposes its geometry to the audit.
+- New sweep rules: `link-gap` (dangling arrow ends), `link-short` (stubs
+  under 48px), `link-skew` / `link-diagonal` (orthogonal routing),
+  `link-cross` (arrows through boxes or text), `link-label` (crowded arrow
+  labels), `link-offcenter` (landings centered on box edges), `marker-over`
+  (packets or dots on boxes), `content-bounds` (content leaving its content
+  box), `void` (empty lower third) and `zone-offcenter` (content off center in
+  a Group).
+- `Group` marks its outline as a zone; `SafeArea` marks the content box.
+- `build_srt.py` attaches opening quotes and brackets to the next word.
+- `generate_voiceover.py` drops the sentence copies Azure emits at SSML breaks.
+
 ## 1.1.2
 
 - `wordFrame` matches across multi-word boundary tokens (Azure returns some
