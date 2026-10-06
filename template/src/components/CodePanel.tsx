@@ -35,7 +35,7 @@ export const CodePanel: React.FC<{
 
   return (
     <Audit id={id}>
-      <div
+      <div data-fit="code"
         style={{
           position: 'absolute',
           left: x,

@@ -34,7 +34,7 @@ export const Node: React.FC<{
 
   return (
     <Audit id={id}>
-      <div
+      <div data-fit={`node:${id}`} data-fit-bordered
         style={{
           position: 'absolute',
           left: x,

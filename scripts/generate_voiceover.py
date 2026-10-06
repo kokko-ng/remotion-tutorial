@@ -15,8 +15,16 @@ Narration file format:
     {
       "voice": "en-US-AndrewMultilingualNeural",   // optional
       "rate": "-4%",                               // optional
+      "ssml": true,                                // optional, see below
       "scenes": [{"id": "s01", "text": "..."}, ...]
     }
+
+SSML mode (--ssml, or "ssml": true in the narration file) wraps each scene in
+SSML: the rate becomes a <prosody> rate, every "[beat]" marker in the text
+becomes a <break time="250ms"/> (--beat to change), and --lexicon points at a
+JSON map {"display text": "spoken alias"} whose entries become <sub alias>
+pronunciations (e.g. {"GiB": "gibibytes"}). Subtitles keep the display text.
+In plain-text mode "[beat]" markers are removed before synthesis.
 
 Authentication: reads SPEECH_KEY from the environment if set, otherwise fetches
 key1 of the given Cognitive Services resource with the az CLI. Only Python
@@ -29,6 +37,7 @@ Usage:
 """
 import argparse
 import io
+import re
 import json
 import os
 import subprocess
@@ -97,17 +106,38 @@ def wav_duration_sec(path):
         return w.getnframes() / w.getframerate()
 
 
+def xml_escape(s):
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def to_ssml(text, voice, rate, lexicon, beat):
+    body = xml_escape(text)
+    # longest keys first so "RA-GZRS" wins over "GZRS"
+    for key in sorted(lexicon, key=len, reverse=True):
+        pat = r"(?<![\w-])" + re.escape(xml_escape(key)) + r"(?![\w-])"
+        body = re.sub(pat, f'<sub alias="{xml_escape(lexicon[key])}">{xml_escape(key)}</sub>', body)
+    body = body.replace("[beat]", f'<break time="{beat}"/>')
+    return (
+        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
+        'xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US">'
+        f'<voice name="{voice}"><prosody rate="{rate}">{body}</prosody></voice></speak>'
+    )
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--narration", required=True)
     ap.add_argument("--project", required=True, help="Remotion project dir containing scenes.json")
     ap.add_argument("--voice", default=None)
     ap.add_argument("--rate", default=None)
-    ap.add_argument("--resource-name", default="kokko-dev")
-    ap.add_argument("--resource-group", default="kokko-dev-rg")
+    ap.add_argument("--resource-name", required=True, help="Speech or AIServices resource name")
+    ap.add_argument("--resource-group", required=True)
     ap.add_argument("--subscription", default=None)
     ap.add_argument("--scenes", default=None, help="comma-separated scene ids to (re)generate")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--ssml", action="store_true", help="synthesize from SSML (prosody rate, [beat] breaks, lexicon)")
+    ap.add_argument("--lexicon", default=None, help="JSON map of display text -> spoken alias (SSML mode)")
+    ap.add_argument("--beat", default="250ms", help="pause length for [beat] markers (SSML mode)")
     args = ap.parse_args()
 
     narration = json.loads(Path(args.narration).read_text())
@@ -123,10 +153,20 @@ def main():
 
     voice = args.voice or narration.get("voice") or DEFAULT_VOICE
     rate = args.rate or narration.get("rate") or DEFAULT_RATE
+    use_ssml = args.ssml or bool(narration.get("ssml"))
+    lexicon = json.loads(Path(args.lexicon).read_text()) if args.lexicon else {}
+    if lexicon and not use_ssml:
+        sys.exit("--lexicon needs SSML mode (--ssml)")
+    if use_ssml:
+        inputs = [{"content": to_ssml(s["text"], voice, rate, lexicon, args.beat)} for s in scenes]
+        config = {}
+    else:
+        inputs = [{"content": re.sub(r"\s*\[beat\]\s*", " ", s["text"]).strip()} for s in scenes]
+        config = {"synthesisConfig": {"voice": voice, "rate": rate}}
     body = {
-        "inputKind": "PlainText",
-        "synthesisConfig": {"voice": voice, "rate": rate},
-        "inputs": [{"content": s["text"]} for s in scenes],
+        "inputKind": "SSML" if use_ssml else "PlainText",
+        **config,
+        "inputs": inputs,
         "properties": {
             "outputFormat": "riff-24khz-16bit-mono-pcm",
             "wordBoundaryEnabled": True,

@@ -123,6 +123,12 @@ per scene: `public/audio/sNN.wav` and `public/audio/sNN.words.json`, and the
 measured `durationSec` is written back into `scenes.json`. Details, endpoint
 notes, and the SDK fallback: `references/azure-tts.md`.
 
+For pacing control use SSML mode: add `--ssml` (or `"ssml": true` in
+narration.json). The rate becomes a prosody rate, `[beat]` markers in the
+narration become short breaks, and `--lexicon lexicon.json` maps on-screen
+terms to spoken aliases (`{"GiB": "gibibytes"}`). Synthesize one scene first
+and check its subtitles before running the whole video.
+
 ## Step 6: Subtitles
 
 ```bash
@@ -153,6 +159,10 @@ Write one component per scene in `src/scenes/`, register it in
   its word).
 - Wrap every element that must never overlap a sibling in
   `<Audit id="...">`. Do not wrap arrows; connectors legitimately cross boxes.
+- Mark every bounded box you write (a fixed-width label, chip, card or cell)
+  with `data-fit="<name>"` so the layout sweep checks that its text fits and
+  keeps its inset. Node, Callout and CodePanel already do.
+- `wordFrame` accepts phrases (`wordFrame(words, 'encryption at host')`).
 
 Run `npx tsc --noEmit` in the project until clean.
 
@@ -161,17 +171,25 @@ Run `npx tsc --noEmit` in the project until clean.
 Follow `references/review-checklist.md` exactly. Summary:
 
 ```bash
+scripts/layout_sweep.sh videos/<slug>                                # automated, whole video
 python3 scripts/review_stills.py --project videos/<slug>            # pass 1
 python3 scripts/review_stills.py --project videos/<slug> --shift 5 --debug   # pass 2
 ```
+
+The layout sweep runs first and must exit 0. It renders every scene every 2
+seconds (plus its last frame) with the layout audit on and fails on any text
+overflowing its box, text closer than 8px to a bordered edge, blocks
+overlapping or closer than 12px, anything outside the safe area or in the
+subtitle band, and any `wordFrame` cue that is not in the narration. Stills
+sample 4 to 5 frames per scene; the sweep covers the rest.
 
 Pass 1: look at every still with the Read tool against the checklist
 (clipping, overlap, margins, subtitle collisions, contrast, token
 conformity). Fix findings in scene code. Pass 2 is a genuine double-check:
 shifted sample points plus the LayoutAudit debug overlay, which draws red
-outlines on any overlap or safe-margin violation. A scene passes only when a
-full pass has zero findings and the debug still shows no red. Never render
-the final video before every scene passes.
+outlines on any overlap or safe-margin violation. A scene passes only when the
+layout sweep is clean, a full pass has zero findings, and the debug still
+shows no red. Never render the final video before every scene passes.
 
 ## Step 9: Render per chapter
 

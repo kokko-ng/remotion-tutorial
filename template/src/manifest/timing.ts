@@ -21,8 +21,10 @@ export const totalDurationFrames = (): number =>
 const stripPunct = (s: string) => s.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
 
 /**
- * Frame (scene-relative) at which the nth occurrence of a word is spoken.
- * Returns 0 and warns if not found, so a typo degrades gracefully.
+ * Frame (scene-relative) at which the nth occurrence of a word, or of a
+ * multi-word phrase ("encryption at host"), starts being spoken.
+ * Returns 0 and warns if not found, so a typo degrades gracefully; the layout
+ * sweep reports every such warning.
  */
 export const wordFrame = (
   words: WordToken[] | null,
@@ -30,12 +32,20 @@ export const wordFrame = (
   occurrence = 1,
 ): number => {
   if (!words) return 0;
-  const target = stripPunct(query);
+  const parts = query.split(/\s+/).map(stripPunct).filter(Boolean);
+  const spoken = words.filter((w) => !w.punct);
   let seen = 0;
-  for (const w of words) {
-    if (!w.punct && stripPunct(w.text) === target) {
+  for (let i = 0; i + parts.length <= spoken.length; i++) {
+    let ok = true;
+    for (let j = 0; j < parts.length; j++) {
+      if (stripPunct(spoken[i + j].text) !== parts[j]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) {
       seen += 1;
-      if (seen === occurrence) return msToFrame(w.startMs, manifest.fps);
+      if (seen === occurrence) return msToFrame(spoken[i].startMs, manifest.fps);
     }
   }
   // eslint-disable-next-line no-console
