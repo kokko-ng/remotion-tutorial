@@ -3,6 +3,7 @@ import {S01_Example} from './S01_Example';
 import {DevLayoutFixture} from './dev/DevLayoutFixture';
 import {DevPreview} from './dev/DevPreview';
 import {DevColumnFixture} from './dev/DevColumnFixture';
+import {DevConnectorFixture} from './dev/DevConnectorFixture';
 
 export interface SceneProps {
   sceneId: string;
@@ -17,4 +18,5 @@ export const sceneRegistry: Record<string, React.FC<SceneProps>> = {
   DevLayoutFixture,
   DevPreview,
   DevColumnFixture,
+  DevConnectorFixture,
 };
