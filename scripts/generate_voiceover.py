@@ -142,6 +142,20 @@ def restore_display(words, lexicon):
     return out
 
 
+def clean_break_tokens(words):
+    """At an SSML <break/>, Azure can emit the punctuation mark plus a copy of
+    the rest of the sentence as one boundary token (',  but the meter ...').
+    The real word tokens follow separately, so keep only the punctuation."""
+    out = []
+    for w in words:
+        m = re.match(r"^([.,;:!?]+)\s+\S", w["text"])
+        if m:
+            out.append({**w, "text": m.group(1), "durationMs": 0, "punct": True})
+        else:
+            out.append(w)
+    return out
+
+
 def wav_duration_sec(path):
     with wave.open(str(path), "rb") as w:
         return w.getnframes() / w.getframerate()
@@ -259,7 +273,7 @@ def main():
         wav_path.write_bytes(zf.read(res["audioFileName"]))
         raw_words = json.loads(zf.read(res["wordBoundaryFileName"]))
         words_path = audio_dir / f"{scene['id']}.words.json"
-        words_path.write_text(json.dumps(restore_display(normalize_words(raw_words), lexicon), indent=1))
+        words_path.write_text(json.dumps(clean_break_tokens(restore_display(normalize_words(raw_words), lexicon)), indent=1))
         dur = int(res["properties"]["durationInMilliseconds"]) / 1000.0
         if dur <= 0:
             dur = wav_duration_sec(wav_path)
