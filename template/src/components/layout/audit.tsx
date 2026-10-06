@@ -138,6 +138,16 @@ const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: stri
       ...findings.map((f) => ({id: f.id, rect: f.rect, bad: true})),
     ];
     for (const f of findings) console.warn(`[layout] ${sceneId} f${frame} ${f.id}`);
+    // Visual density (text runs, images, audited blocks): scripts/export_stills.sh
+    // uses it to pick each scene's fullest frame.
+    const walker = scope.ownerDocument.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    let runs = 0;
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const p = n.parentElement;
+      if (n.textContent?.trim() && p && !p.closest('[data-subtitles],[data-audit-overlay]')) runs++;
+    }
+    const imgs = scope.querySelectorAll('img').length;
+    console.log(`[density] ${sceneId} f${frame} ${runs + imgs * 4 + audited.length}`);
     setBoxes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, [frame, registry, version, width, height, sceneId]);
 
