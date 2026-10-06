@@ -29,7 +29,7 @@ export const DevPreview: React.FC<SceneProps> = () => {
         <Note id="left" text="The poller asks the provider what changed." x={144} y={200} w={520} at={0} />
         <Tag id="left-tag" text="changed-since cursor" x={144} y={330} at={0} />
         <Note id="right" text="The stream keeps the answer for a day." x={1064} y={200} w={520} at={0} />
-        <Arrow x1={670} y1={230} x2={1058} y2={230} />
+        <Arrow x1={600} y1={230} x2={1058} y2={230} />
       </Sequence>
     </SafeArea>
   );
