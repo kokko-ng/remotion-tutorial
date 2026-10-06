@@ -196,3 +196,21 @@ linter; the rest are process rules. Read before starting a walkthrough
   cross it out (strike the name instead).
 - The stills exporter keyed audit reports by scene-relative frame, so scenes in one chapter
   overwrote each other; key by scene id and frame.
+
+## Final render
+
+- Fonts loaded from a CDN at render time (`@remotion/google-fonts`) can time the render out
+  after 30 s when the CDN is unreachable. The template self-hosts every face from
+  `@fontsource` packages (the bundler serves the woff2 files locally) and loads only the
+  active preset's faces. `@remotion/fonts` must match the installed `remotion` version
+  exactly, or `fetchFontData is not a function` is thrown at load.
+- Load every weight the scenes use. A loader that fetches 400 and 600 only makes every 700
+  a synthesised bold, and switching to the real face changes text widths: re-run the layout
+  sweep and re-render every chapter after a font change.
+- Scenes that compute `durationInFrames` from word times throw "durationInFrames must be
+  positive" in a full render if they mount before the words file loads. The Chapter gates
+  each scene on its word timings; a missing file resolves to `[]` so an unvoiced scene still
+  renders (without that fallback the preset samples rendered blank). Stills do not surface
+  this; a render of the first chapters does.
+- Make the per-chapter render loop resumable (skip finished chapters). In zsh,
+  `rm -f out/ch*.mp4` with no matches aborts an `&&` chain; use `find -delete`.

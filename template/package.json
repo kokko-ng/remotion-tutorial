@@ -7,8 +7,15 @@
     "render": "remotion render"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.0",
+    "@fontsource/ibm-plex-sans": "^5.2.0",
+    "@fontsource/inter": "^5.2.0",
+    "@fontsource/jetbrains-mono": "^5.2.0",
+    "@fontsource/nunito": "^5.2.0",
+    "@fontsource/source-serif-4": "^5.2.0",
+    "@fontsource/stix-two-text": "^5.2.0",
     "@remotion/cli": "^4.0.507",
-    "@remotion/google-fonts": "^4.0.507",
+    "@remotion/fonts": "4.0.507",
     "@remotion/media": "^4.0.507",
     "katex": "^0.18.4",
     "react": "^19.2.8",
