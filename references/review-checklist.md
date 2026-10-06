@@ -4,6 +4,35 @@ The review is not optional and it is not one pass. Frames that were never
 looked at are frames that ship broken. The loop was designed so that the
 second look is a genuinely different look, not a rubber stamp.
 
+## Automated layout sweep (run first)
+
+```bash
+scripts/layout_sweep.sh videos/<slug>          # all chapters
+scripts/layout_sweep.sh videos/<slug> ch03     # one chapter after a fix
+```
+
+Stills sample a handful of frames; overflow often lives between them (a
+label that only appears for two seconds, a callout that wraps once a later
+line lands). The sweep renders the `LayoutCheck` composition: every scene
+every 2 seconds (`SWEEP_EVERY_SEC` to change) plus its last frame, with the
+audit overlay running `runLayoutChecks` (template
+`src/components/layout/checks.ts`). Rules, all in composition pixels and
+editable in `RULES`:
+
+| Finding | Meaning |
+|---|---|
+| `overflow:<name>` | text or content spills out of a `[data-fit]` box |
+| `inset:<name>` | text closer than 8px to a bordered `[data-fit]` box's edge |
+| `overlap:a+b` | two audited blocks intersect (nested blocks are exempt) |
+| `tight:a+b(Npx)` | two audited blocks closer than 12px |
+| `bounds:<id>` / `text-bounds:x,y` | outside the safe area or inside the subtitle band |
+| `wordFrame: "..." not found` | a reveal cue is not in the narration, so it fires at frame 0 |
+
+Exit 0 means clean, 1 means findings, 2 means a render failed (a failed
+render is never reported as clean). Fix every finding, rerun the chapter,
+and only then move to the stills. Prove the sweep on a new component by
+seeding a too-narrow box once and confirming it is flagged.
+
 ## Sampling
 
 `scripts/review_stills.py` renders stills per scene at 15/40/65/90 percent of

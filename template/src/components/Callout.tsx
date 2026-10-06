@@ -24,7 +24,7 @@ export const Callout: React.FC<{
   const scale = theme.motion === 'spring' ? 0.94 + 0.06 * p : 1;
   return (
     <Audit id={id}>
-      <div
+      <div data-fit="callout"
         style={{
           position: 'absolute',
           left: x,

@@ -49,6 +49,23 @@ the script writes into `scenes.json` as `durationSec`.
 Artifacts on the service auto-delete after a few days; the script downloads
 immediately, so this never matters.
 
+## SSML mode
+
+`--ssml` (or `"ssml": true` in narration.json) sends `"inputKind": "SSML"`
+with one `<speak>` document per scene and no `synthesisConfig`:
+
+- `rate` becomes `<prosody rate="...">` around the whole scene.
+- `[beat]` in the narration becomes `<break time="250ms"/>` (`--beat 300ms`
+  to change). Plain-text mode strips `[beat]` instead of reading it aloud.
+- `--lexicon file.json` maps display text to a spoken alias with
+  `<sub alias>`; longest keys match first, whole tokens only. Use it for
+  units and symbols the voice reads badly (`GiB`, `140-2`).
+
+Word boundaries for a `<sub>` term can come back as the alias rather than the
+display text, which then shows up in the subtitles. Synthesize one scene with
+the lexicon terms and read its `words.json` before running the full job; if
+the alias appears, map it back before `build_srt.py` or drop that entry.
+
 ## Word timestamps
 
 `0001.word.json` entries look like `{"Text": "Hello", "AudioOffset": 100,

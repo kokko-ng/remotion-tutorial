@@ -18,9 +18,14 @@ What the skill enforces:
   entirely by design tokens, with hard anti-slop rules: no gradients, no
   glassmorphism, no emoji, motion only when the narration introduces
   something.
-- Voiceover through Azure Speech batch synthesis via the az CLI, which also
+- Voiceover through Azure Speech batch synthesis via the az CLI (plain text
+  or SSML with prosody rate, pauses and a pronunciation lexicon), which also
   returns per-word timestamps; visual reveals are keyed to the exact frame a
-  word is spoken.
+  word or phrase is spoken.
+- An automated layout sweep over the whole video: every scene is rendered
+  every 2 seconds with a layout audit that fails on text overflowing its box,
+  cramped insets and gaps, safe-margin and subtitle-band violations, and
+  missing word cues.
 - A mandatory two-pass aesthetic review: rendered stills are visually
   inspected against a checklist, then re-inspected at shifted timestamps with
   a layout-audit overlay that flags overlaps and margin violations in red.
@@ -61,8 +66,8 @@ video on eigenvalues, chalkboard style").
 - `SKILL.md` — the workflow the agent follows
 - `references/` — narration voice, humanizer rules, aesthetic presets,
   review checklist, Azure TTS pipeline, grounding and licensing
-- `scripts/` — voiceover generation, subtitle building, review stills,
-  chapter concat
+- `scripts/` — voiceover generation, subtitle building, layout sweep,
+  review stills, chapter concat
 - `template/` — the complete Remotion project each video starts from
 - `samples/` — one still per preset and the showcase scene that renders them
 - `examples/` — briefs, narrations, and scene code of the three demo videos
