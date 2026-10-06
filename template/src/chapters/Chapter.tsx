@@ -16,7 +16,11 @@ import type {WordToken} from '../manifest/types';
  * on at once and the layout sweep reports false overlaps.
  */
 const SceneGate: React.FC<{sceneId: string; silent: boolean; children: React.ReactNode}> = ({sceneId, silent, children}) => {
-  const words = useJson<WordToken[]>(silent ? null : `audio/${sceneId}.words.json`);
+  // A missing words file resolves to [] (useJson's 404 fallback), so a scene
+  // whose timings do not exist (the preset samples, a scene not yet voiced)
+  // renders; only a file that is still loading holds the scene back. Without
+  // the fallback a missing file gated the scene forever and it rendered blank.
+  const words = useJson<WordToken[]>(silent ? null : `audio/${sceneId}.words.json`, []);
   // a scene with no narration (a dev fixture or preview) renders at once
   return silent || words ? <>{children}</> : null;
 };
