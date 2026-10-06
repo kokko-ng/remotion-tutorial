@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
-import {runLayoutChecks, type Rect} from './checks';
+import {runLayoutChecks, zoneBalance, type Rect} from './checks';
 
 /**
  * Layout audit for the aesthetic review loop. Scenes wrap elements that must
@@ -164,6 +164,9 @@ const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: stri
       if (r.height > 0) bottom = Math.max(bottom, (r.bottom - c.y) * sy);
     });
     console.log(`[density] ${sceneId} f${frame} ${runs + imgs * 4 + audited.length} b${Math.round(bottom)}`);
+    for (const z of zoneBalance(scope)) {
+      console.log(`[zone] ${sceneId} f${frame} ${z.name} n${z.count} dx${z.dx.toFixed(3)} dy${z.dy.toFixed(3)}`);
+    }
     setBoxes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, [frame, registry, version, width, height, sceneId]);
 
