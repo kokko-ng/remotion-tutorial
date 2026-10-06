@@ -12,8 +12,8 @@ OUT=$("$HERE/layout_sweep.sh" "$PROJECT" devfail dev 2>&1)
 echo "$OUT" | sed 's/^/  /' | head -80
 status=0
 for rule in overlap tight bounds text-bounds overflow duplicate-id text-overflow clipped-text \
-            illegible-text cropped-label unlabelled-node off-center arrow-detached \
-            arrow-through-text arrow-pileup column-top; do
+            illegible-text cropped-label unlabelled-node off-center arrow-pileup column-top \
+            link-gap link-cross; do
   if ! echo "$OUT" | grep -q "d0[23] f[0-9]* $rule:"; then
     echo "SELFTEST FAIL: the fixture did not trip '$rule'"
     status=1

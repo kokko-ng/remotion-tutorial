@@ -160,6 +160,20 @@ def restore_display(words, lexicon):
     return out
 
 
+def clean_break_tokens(words):
+    """At an SSML <break/>, Azure can emit the punctuation mark plus a copy of
+    the rest of the sentence as one boundary token (',  but the meter ...').
+    The real word tokens follow separately, so keep only the punctuation."""
+    out = []
+    for w in words:
+        m = re.match(r"^([.,;:!?]+)\s+\S", w["text"])
+        if m:
+            out.append({**w, "text": m.group(1), "durationMs": 0, "punct": True})
+        else:
+            out.append(w)
+    return out
+
+
 def wav_duration_sec(path):
     with wave.open(str(path), "rb") as w:
         return w.getnframes() / w.getframerate()
@@ -430,7 +444,7 @@ def main():
         aligned, ratio = align_words(scene, inners.get(scene["id"]), raw_words)
         if ratio < 0.9:
             print(f"  warning: {scene['id']}: only {ratio:.0%} of spoken words aligned; using raw boundary tokens")
-            aligned = restore_display(normalize_words(raw_words), lexicon)
+            aligned = clean_break_tokens(restore_display(normalize_words(raw_words), lexicon))
         words_path.write_text(json.dumps(aligned, indent=1))
         dur = int(res["properties"]["durationInMilliseconds"]) / 1000.0
         if dur <= 0:
