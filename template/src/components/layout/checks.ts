@@ -338,3 +338,24 @@ const linkOffCenter = ({scope, add, toFrame, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkOffCenter);
+
+/** marker-over: visible [data-marker] elements do not overlap boxes or text. */
+const markerOver = ({scope, add, toFrame}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement | SVGElement>('[data-marker]').forEach((mk, k) => {
+    const mr = mk.getBoundingClientRect();
+    if (mr.width === 0 && mr.height === 0) return;
+    const cs = getComputedStyle(mk);
+    if (parseFloat(cs.opacity || '1') < 0.5 || cs.visibility === 'hidden') return;
+    const over = (o: DOMRect) => o.left < mr.right && o.right > mr.left && o.top < mr.bottom && o.bottom > mr.top;
+    let hit = false;
+    scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+      if (hit || isZone(el) || el.contains(mk)) return;
+      const r = el.getBoundingClientRect();
+      const wrapsDiagram = r.width > 600 && r.height > 300;
+      if (!wrapsDiagram && over(r)) hit = true;
+    });
+    if (!hit) for (const t of textRects(scope)) if (over(t.rect)) { hit = true; break; }
+    if (hit) add(`marker-over:${mk.getAttribute('data-marker') || k}`, toFrame(mr));
+  });
+};
+EXTRA_RULES.push(markerOver);
