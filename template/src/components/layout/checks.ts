@@ -359,3 +359,18 @@ const markerOver = ({scope, add, toFrame}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(markerOver);
+
+/** content-bounds: nothing crosses the left or right edge of [data-content-box]. */
+const contentBounds = ({scope, add, toFrame, scale}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement>('[data-content-box]').forEach((cb) => {
+    const box = cb.getBoundingClientRect();
+    const tol = 2 * scale;
+    const outside = (r: DOMRect) => r.width > 0 && (r.right > box.right + tol || r.left < box.left - tol);
+    for (const t of textRects(cb)) if (outside(t.rect)) add(`content-bounds:text@${Math.round(t.rect.x)}`, toFrame(t.rect));
+    cb.querySelectorAll<Element>('[data-fit],img,svg:not(:has([data-link])),[data-link]').forEach((el, k) => {
+      const r = el.getBoundingClientRect();
+      if (outside(r)) add(`content-bounds:${el.getAttribute('data-fit') ?? el.tagName.toLowerCase()}#${k}`, toFrame(r));
+    });
+  });
+};
+EXTRA_RULES.push(contentBounds);
