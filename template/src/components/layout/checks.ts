@@ -21,6 +21,8 @@ export const RULES = {
   vTolFrac: 0.3,
   /** An arrow end must land within this distance of a box, image or text (or a zone outline). */
   linkEndGap: 10,
+  /** Shortest visible connector; anything shorter reads as a stub. */
+  minLinkLen: 48,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -198,3 +200,16 @@ const linkGap = ({scope, add, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkGap);
+
+/** link-short: connectors are at least RULES.minLinkLen long. */
+const linkShort = ({scope, add, toFrame, scale}: RuleCtx) => {
+  linkEls(scope).forEach((el, k) => {
+    const pts = linkPoints(el);
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    if (pts.length >= 2 && len < RULES.minLinkLen * scale) {
+      add(`link-short:${el.getAttribute('data-link')}#${k}(${Math.round(len / scale)}px)`, toFrame(el.getBoundingClientRect()));
+    }
+  });
+};
+EXTRA_RULES.push(linkShort);
