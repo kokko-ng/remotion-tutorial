@@ -27,6 +27,8 @@ export const RULES = {
   skewDeg: 12,
   /** Connectors may touch boxes only within this distance of their own endpoints. */
   linkEndSlack: 16,
+  /** Clearance between a connector label and any box, image or text. */
+  labelGap: 20,
 };
 
 export type Rect = {x: number; y: number; w: number; h: number};
@@ -274,3 +276,23 @@ const linkCross = ({scope, add, toFrame, scale}: RuleCtx) => {
   });
 };
 EXTRA_RULES.push(linkCross);
+
+/** link-label: labels on connectors keep RULES.labelGap clear of boxes, images and text. */
+const linkLabel = ({scope, add, toFrame, scale}: RuleCtx) => {
+  scope.querySelectorAll<HTMLElement>('[data-link-label]').forEach((lab, k) => {
+    const lr = lab.getBoundingClientRect();
+    const g = RULES.labelGap * scale;
+    const encloses = (o: DOMRect) => o.left <= lr.left + 1 && o.right >= lr.right - 1 && o.top <= lr.top + 1 && o.bottom >= lr.bottom - 1;
+    const near = (o: DOMRect) => o.left < lr.right + g && o.right > lr.left - g && o.top < lr.bottom + g && o.bottom > lr.top - g;
+    const boxes: DOMRect[] = [];
+    scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+      if (!isZone(el)) boxes.push(el.getBoundingClientRect());
+    });
+    scope.querySelectorAll('img').forEach((el) => boxes.push(el.getBoundingClientRect()));
+    for (const t of textRects(scope)) boxes.push(t.rect);
+    const own = textRects(lab).map((x) => x.rect);
+    const hit = boxes.find((o) => !encloses(o) && near(o) && !own.some((w) => w.left === o.left && w.top === o.top));
+    if (hit) add(`link-label:${(lab.textContent ?? '').trim().slice(0, 24).replace(/\s+/g, '_')}#${k}`, toFrame(lr));
+  });
+};
+EXTRA_RULES.push(linkLabel);
