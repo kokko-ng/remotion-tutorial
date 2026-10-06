@@ -7,6 +7,18 @@ import {AuditProvider} from '../components/layout/audit';
 import {Subtitles} from '../components/Subtitles';
 import {ProgressBar} from '../components/ProgressBar';
 import {sceneRegistry} from '../scenes';
+import {useJson} from '../manifest/useJson';
+import type {WordToken} from '../manifest/types';
+
+/**
+ * Renders a scene only once its word timings are loaded. Without this, every
+ * wordFrame cue resolves to 0 while a scene premounts, so all reveals flash
+ * on at once and the layout sweep reports false overlaps.
+ */
+const SceneGate: React.FC<{sceneId: string; children: React.ReactNode}> = ({sceneId, children}) => {
+  const words = useJson<WordToken[]>(`audio/${sceneId}.words.json`);
+  return words ? <>{children}</> : null;
+};
 
 export interface ChapterProps extends Record<string, unknown> {
   chapterId: string;
@@ -53,7 +65,9 @@ export const Chapter: React.FC<ChapterProps> = ({chapterId, debugLayout = false,
               {audio && scene.durationSec > 0 ? (
                 <Audio src={staticFile(`audio/${scene.id}.wav`)} premountFor={manifest.fps} />
               ) : null}
-              <SceneComp sceneId={scene.id} />
+              <SceneGate sceneId={scene.id}>
+                <SceneComp sceneId={scene.id} />
+              </SceneGate>
               <Subtitles sceneId={scene.id} />
             </AuditProvider>
           </Sequence>

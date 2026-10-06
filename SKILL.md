@@ -182,7 +182,9 @@ seconds (plus its last frame) with the layout audit on and fails on any text
 overflowing its box, text closer than 8px to a bordered edge, blocks
 overlapping or closer than 12px, anything outside the safe area or in the
 subtitle band, and any `wordFrame` cue that is not in the narration. Stills
-sample 4 to 5 frames per scene; the sweep covers the rest.
+sample 4 to 5 frames per scene; the sweep covers the rest. Before rendering,
+`scripts/export_stills.sh videos/<slug>` writes one full-resolution still per
+scene (its fullest moment) to `stills/` for the user's visual audit.
 
 Pass 1: look at every still with the Read tool against the checklist
 (clipping, overlap, margins, subtitle collisions, contrast, token
