@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
-import {runLayoutChecks, type Rect} from './checks';
+import {runLayoutChecks, zoneBalance, type Rect} from './checks';
 
 /**
  * Layout audit for the aesthetic review loop. Scenes wrap elements that must
@@ -147,7 +147,26 @@ const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: stri
       if (n.textContent?.trim() && p && !p.closest('[data-subtitles],[data-audit-overlay]')) runs++;
     }
     const imgs = scope.querySelectorAll('img').length;
-    console.log(`[density] ${sceneId} f${frame} ${runs + imgs * 4 + audited.length}`);
+    // Lowest painted content (frame y), for the scene-level empty-space rule.
+    let bottom = 0;
+    const scan = scope.ownerDocument.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    const rg = scope.ownerDocument.createRange();
+    for (let n = scan.nextNode(); n; n = scan.nextNode()) {
+      const p = n.parentElement;
+      if (!n.textContent?.trim() || !p || p.closest('[data-subtitles],[data-audit-overlay]')) continue;
+      rg.selectNodeContents(n);
+      const r = rg.getBoundingClientRect();
+      if (r.height > 0) bottom = Math.max(bottom, (r.bottom - c.y) * sy);
+    }
+    scope.querySelectorAll('img,svg,[data-fit]').forEach((el) => {
+      if ((el as HTMLElement).closest('[data-audit-overlay],[data-subtitles]')) return;
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) bottom = Math.max(bottom, (r.bottom - c.y) * sy);
+    });
+    console.log(`[density] ${sceneId} f${frame} ${runs + imgs * 4 + audited.length} b${Math.round(bottom)}`);
+    for (const z of zoneBalance(scope)) {
+      console.log(`[zone] ${sceneId} f${frame} ${z.name} n${z.count} dx${z.dx.toFixed(3)} dy${z.dy.toFixed(3)}`);
+    }
     setBoxes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, [frame, registry, version, width, height, sceneId]);
 
