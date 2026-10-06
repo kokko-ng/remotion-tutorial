@@ -126,8 +126,9 @@ notes, and the SDK fallback: `references/azure-tts.md`.
 For pacing control use SSML mode: add `--ssml` (or `"ssml": true` in
 narration.json). The rate becomes a prosody rate, `[beat]` markers in the
 narration become short breaks, and `--lexicon lexicon.json` maps on-screen
-terms to spoken aliases (`{"GiB": "gibibytes"}`). Synthesize one scene first
-and check its subtitles before running the whole video.
+terms to spoken aliases (`{"GiB": "gibibytes"}`). Then run
+`scripts/pronunciation_qa.py` (speech-to-text diff against the narration) and
+fix misread terms with lexicon entries before building subtitles.
 
 ## Step 6: Subtitles
 

@@ -23,7 +23,9 @@ SSML mode (--ssml, or "ssml": true in the narration file) wraps each scene in
 SSML: the rate becomes a <prosody> rate, every "[beat]" marker in the text
 becomes a <break time="250ms"/> (--beat to change), and --lexicon points at a
 JSON map {"display text": "spoken alias"} whose entries become <sub alias>
-pronunciations (e.g. {"GiB": "gibibytes"}). Subtitles keep the display text.
+pronunciations (e.g. {"GiB": "gibibytes"}). Azure reports word boundaries for
+a <sub> term as the alias plus a stray '">' token; the script maps them back so
+words.json (and the subtitles) keep the display text.
 In plain-text mode "[beat]" markers are removed before synthesis.
 
 Authentication: reads SPEECH_KEY from the environment if set, otherwise fetches
@@ -99,6 +101,45 @@ def normalize_words(raw):
             "punct": is_punct(entry["Text"]),
         })
     return words
+
+
+def restore_display(words, lexicon):
+    """Map <sub alias> word boundaries back to the display text.
+
+    Azure reports the alias tokens ("140", "dash", "2") followed by a leftover
+    token that starts with '">' plus the display text and whatever word came
+    next ('">140-2 validated'). Collapse the alias tokens into one token with
+    the display text, and keep the trailing remainder as its own token using
+    the leftover token's timing.
+    """
+    out = []
+    for w in words:
+        txt = w["text"]
+        if not txt.startswith('">'):
+            out.append(w)
+            continue
+        body = txt[2:]
+        key = next((k for k in sorted(lexicon, key=len, reverse=True) if body.startswith(k)), None)
+        if key is None:
+            body = body.lstrip()
+            if body:
+                out.append({**w, "text": body, "punct": is_punct(body)})
+            continue
+        alias_parts = [a for a in re.split(r"\s+", lexicon[key]) if a]
+        n = len(alias_parts)
+        tail = [x for x in out[-n:] if not x["punct"]] if n else []
+        if n and len(tail) == n and " ".join(x["text"] for x in tail).lower().replace("-", " ") == " ".join(alias_parts).lower().replace("-", " "):
+            first, last = out[-n], out[-1]
+            del out[-n:]
+            out.append({"text": key, "startMs": first["startMs"],
+                        "durationMs": last["startMs"] + last["durationMs"] - first["startMs"], "punct": False})
+        else:
+            out.append({"text": key, "startMs": w["startMs"], "durationMs": 0, "punct": False})
+        rest = body[len(key):].strip()
+        for piece in re.findall(r"[^\s.,;:!?]+|[.,;:!?]", rest):
+            out.append({"text": piece, "startMs": w["startMs"], "durationMs": w["durationMs"],
+                        "punct": is_punct(piece)})
+    return out
 
 
 def wav_duration_sec(path):
@@ -218,7 +259,7 @@ def main():
         wav_path.write_bytes(zf.read(res["audioFileName"]))
         raw_words = json.loads(zf.read(res["wordBoundaryFileName"]))
         words_path = audio_dir / f"{scene['id']}.words.json"
-        words_path.write_text(json.dumps(normalize_words(raw_words), indent=1))
+        words_path.write_text(json.dumps(restore_display(normalize_words(raw_words), lexicon), indent=1))
         dur = int(res["properties"]["durationInMilliseconds"]) / 1000.0
         if dur <= 0:
             dur = wav_duration_sec(wav_path)
