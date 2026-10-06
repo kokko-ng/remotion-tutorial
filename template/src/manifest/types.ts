@@ -9,6 +9,9 @@ export interface SceneEntry {
 export interface ChapterEntry {
   id: string;
   title: string;
+  /** development-only chapter (layout fixture, previews): not part of the video,
+   * excluded from the Full composition and from default sweeps, run by name */
+  dev?: boolean;
 }
 
 export interface Manifest {

@@ -12,13 +12,25 @@ export const RULES = {
   /** Scene content must start below this y (raise it when a header strip exists). */
   contentTop: 54,
   /** Minimum gap between separate audited blocks. */
-  minGap: 12,
+  minGap: 16,
   /** Minimum inset between text and the border of a bordered container. */
   minInset: 8,
   /** Horizontal overflow tolerance in px. */
   overflowTol: 2,
   /** Vertical tolerance as a fraction of font size (font ascent/descent exceed tight line boxes). */
   vTolFrac: 0.3,
+  /** Smallest on-screen size, in px, of any diagram label in view on a settled frame. */
+  minLabelPx: 16,
+  /** A composition at least this wide (fraction of the safe width) must be centred... */
+  centreMinWidth: 0.6,
+  /** ...within this fraction of the safe width. */
+  centreTol: 0.05,
+  /** Items at least this wide (fraction of the safe width) are full-width, not a column. */
+  fullWidthFrac: 0.85,
+  /** Side-by-side columns start within this many px of each other. */
+  columnTopTol: 24,
+  /** Two arrow heads must be at least this far apart. */
+  arrowTipGap: 10,
   /** An arrow end must land within this distance of a box, image or text (or a zone outline). */
   linkEndGap: 10,
   /** Shortest visible connector; anything shorter reads as a stub. */
@@ -41,6 +53,14 @@ export interface Finding {
 
 type ToFrame = (r: DOMRect) => Rect;
 
+/** Hidden by an opacity-0 ancestor (a premounted <Sequence>): not on screen. */
+const hiddenByAncestor = (el: Element): boolean => {
+  for (let n: Element | null = el; n; n = n.parentElement) {
+    if (getComputedStyle(n).opacity === '0') return true;
+  }
+  return false;
+};
+
 const textRects = (root: Element): {rect: DOMRect; font: number}[] => {
   const doc = root.ownerDocument;
   const out: {rect: DOMRect; font: number}[] = [];
@@ -49,7 +69,10 @@ const textRects = (root: Element): {rect: DOMRect; font: number}[] => {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     if (!n.textContent || !n.textContent.trim()) continue;
     const parent = n.parentElement;
-    if (!parent || parent.closest('[data-subtitles],[data-audit-overlay]')) continue;
+    // subtitles and the overlay are not scene content; a diagram viewport clips
+    // its own text on purpose (the diagram rules judge what is visible)
+    if (!parent || parent.closest('[data-subtitles],[data-audit-overlay],[data-clip-intended]')) continue;
+    if (hiddenByAncestor(parent)) continue;
     const font = parseFloat(getComputedStyle(parent).fontSize) || 16;
     range.selectNodeContents(n);
     for (const r of Array.from(range.getClientRects())) {
@@ -61,6 +84,112 @@ const textRects = (root: Element): {rect: DOMRect; font: number}[] => {
 
 const safeId = (s: string) => s.replace(/\s+/g, '_');
 
+const unionRects = (rects: DOMRect[]): DOMRect | null => {
+  if (rects.length === 0) return null;
+  let x1 = Infinity;
+  let y1 = Infinity;
+  let x2 = -Infinity;
+  let y2 = -Infinity;
+  for (const r of rects) {
+    x1 = Math.min(x1, r.left);
+    y1 = Math.min(y1, r.top);
+    x2 = Math.max(x2, r.right);
+    y2 = Math.max(y2, r.bottom);
+  }
+  return new DOMRect(x1, y1, x2 - x1, y2 - y1);
+};
+
+const intersects = (a: Rect, b: Rect): boolean =>
+  a.x < b.x + b.w - 0.5 && b.x < a.x + a.w - 0.5 && a.y < b.y + b.h - 0.5 && b.y < a.y + a.h - 0.5;
+
+const distToRect = (px: number, py: number, r: Rect): number =>
+  Math.hypot(Math.max(r.x - px, 0, px - (r.x + r.w)), Math.max(r.y - py, 0, py - (r.y + r.h)));
+
+/** Text cut off inside an element by an overflow-hidden box (not a deliberate clip). */
+const clippedText = (root: HTMLElement): string | null => {
+  const all = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+  for (const el of all) {
+    if (el.closest('[data-clip-intended]')) continue;
+    if (!el.textContent?.trim()) continue;
+    const cs = getComputedStyle(el);
+    if (cs.overflow === 'visible' && cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    if (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1) {
+      return el.textContent.trim().slice(0, 32);
+    }
+  }
+  return null;
+};
+
+/** Diagram labels inside a camera viewport ([data-diagram-scale]): smallest size and first cut label. */
+const diagramLabels = (probe: HTMLElement, pageScale: number): {min: number | null; cropped: string | null} => {
+  const camera = parseFloat(probe.dataset.diagramScale ?? '');
+  if (!Number.isFinite(camera)) return {min: null, cropped: null};
+  const box = probe.getBoundingClientRect();
+  let min = Infinity;
+  let cropped: string | null = null;
+  for (const t of Array.from(probe.querySelectorAll('text'))) {
+    const label = t.textContent?.trim();
+    if (!label) continue;
+    const r = t.getBoundingClientRect();
+    if (r.right <= box.left || r.left >= box.right || r.bottom <= box.top || r.top >= box.bottom) continue;
+    const inside = r.left >= box.left - 0.5 && r.right <= box.right + 0.5 && r.top >= box.top - 0.5 && r.bottom <= box.bottom + 0.5;
+    if (!inside && cropped === null) cropped = label.slice(0, 32);
+    const size = parseFloat(t.getAttribute('font-size') ?? '');
+    if (size > 0) min = Math.min(min, size * camera);
+  }
+  return {min: Number.isFinite(min) ? min * pageScale : null, cropped};
+};
+
+/**
+ * First diagram node at least 30 percent in view whose name is not wholly in
+ * view. The name is the node's c4-name text, else its largest label (a type
+ * chip does not name a box). Boundaries (groups containing other nodes) are
+ * exempt; note the :scope, without it the node's own rect matches.
+ */
+const unlabelledNode = (probe: HTMLElement): string | null => {
+  const box = probe.getBoundingClientRect();
+  for (const g of Array.from(probe.querySelectorAll('svg.figure-dark g[id]'))) {
+    const shape = g.querySelector(':scope > rect');
+    if (!shape || g.querySelector(':scope g[id] > rect')) continue;
+    const r = shape.getBoundingClientRect();
+    const area = r.width * r.height;
+    if (area <= 0) continue;
+    const ix = Math.max(0, Math.min(r.right, box.right) - Math.max(r.left, box.left));
+    const iy = Math.max(0, Math.min(r.bottom, box.bottom) - Math.max(r.top, box.top));
+    if ((ix * iy) / area < 0.3) continue;
+    const texts = Array.from(g.querySelectorAll(':scope > text, :scope > g > text')).filter((t) => t.textContent?.trim());
+    if (texts.length === 0) continue;
+    const size = (t: Element) => parseFloat(t.getAttribute('font-size') ?? '0');
+    const named = texts.filter((t) => t.classList.contains('c4-name'));
+    const biggest = Math.max(...texts.map(size));
+    const names = named.length > 0 ? named : texts.filter((t) => size(t) === biggest);
+    const shown = names.some((t) => {
+      const q = t.getBoundingClientRect();
+      return q.left >= box.left - 0.5 && q.right <= box.right + 0.5 && q.top >= box.top - 0.5 && q.bottom <= box.bottom + 0.5;
+    });
+    if (!shown) return g.id;
+  }
+  return null;
+};
+
+/** Visible drawing of a diagram viewport: its SVG children clipped to the viewport. */
+const diagramInk = (probe: HTMLElement): DOMRect | null => {
+  const box = probe.getBoundingClientRect();
+  const svg = probe.querySelector('svg.figure-dark');
+  if (!svg) return null;
+  const parts: DOMRect[] = [];
+  for (const child of Array.from(svg.children)) {
+    if (['title', 'desc', 'defs'].includes(child.tagName)) continue;
+    const r = child.getBoundingClientRect();
+    const x1 = Math.max(r.left, box.left);
+    const y1 = Math.max(r.top, box.top);
+    const x2 = Math.min(r.right, box.right);
+    const y2 = Math.min(r.bottom, box.bottom);
+    if (x2 > x1 && y2 > y1) parts.push(new DOMRect(x1, y1, x2 - x1, y2 - y1));
+  }
+  return unionRects(parts);
+};
+
 /**
  * Checks for one scope (a scene, or the chapter chrome).
  * - overlap / tight: audited blocks that intersect or sit closer than minGap
@@ -68,6 +197,17 @@ const safeId = (s: string) => s.replace(/\s+/g, '_');
  *   band, or (scenes only) above the content top
  * - overflow: content of a [data-fit] container spilling out of it
  * - inset: text closer than minInset to the border of a bordered [data-fit]
+ * - duplicate-id: two visible audited blocks share an id
+ * - text-overflow: an audited block's text ink spills horizontally out of it
+ * - clipped-text: text cut off by an overflow-hidden box (not data-clip-intended)
+ * - illegible-text / cropped-label / unlabelled-node: a settled diagram
+ *   viewport (kit DiagramShot) shows a label under minLabelPx, slices a label,
+ *   or shows a node box without its name
+ * - off-center: the composition (union of everything on screen, a whole
+ *   diagram by its drawing) is off the frame centre
+ * - arrow-pileup: two arrow heads in one spot (detached ends, arrows through
+ *   text and crowded labels are link-gap / link-cross / link-label below)
+ * - column-top: side-by-side columns that do not start at the same top
  */
 export const runLayoutChecks = (opts: {
   scope: Element;
@@ -114,6 +254,111 @@ export const runLayoutChecks = (opts: {
     const r = toFrame(t.rect);
     if (outOfBounds(r, t.font * R.vTolFrac)) {
       add(`text-bounds:${(t.rect.x | 0)},${(t.rect.y | 0)}`, r);
+    }
+  }
+
+  // Audited blocks: duplicate ids, text spilling out of its own box (nowrap
+  // tags, overflow visible: the element box misses it, the ink does not),
+  // text clipped by an overflow-hidden box.
+  const seen = new Map<string, number>();
+  for (const a of audited) seen.set(a.id, (seen.get(a.id) ?? 0) + 1);
+  for (const [id, n] of seen) if (n > 1) add(`duplicate-id:${id}(${n})`, audited.find((a) => a.id === id)!.rect);
+  for (const a of audited) {
+    const ink = unionRects(textRects(a.el).map((t) => t.rect));
+    if (ink) {
+      const r = toFrame(ink);
+      const spill = Math.max(a.rect.x - r.x, r.x + r.w - (a.rect.x + a.rect.w));
+      if (spill > R.overflowTol) add(`text-overflow:${a.id}(${Math.round(spill)}px)`, r);
+    }
+    const clip = clippedText(a.el);
+    if (clip) add(`clipped-text:${a.id}`, a.rect);
+  }
+
+  // Diagram viewports (kit DiagramShot): legible, no cut labels, named boxes.
+  for (const a of audited) {
+    for (const probe of Array.from(a.el.querySelectorAll<HTMLElement>('[data-diagram-scale]'))) {
+      if (probe.dataset.moving === '1' || probe.dataset.overview === '1') continue;
+      const {min, cropped} = diagramLabels(probe, 1 / scale);
+      if (min !== null && min < R.minLabelPx) add(`illegible-text:${a.id}(${min.toFixed(1)}px)`, a.rect);
+      if (cropped !== null) add(`cropped-label:${a.id}`, a.rect);
+      const bare = unlabelledNode(probe);
+      if (bare !== null) add(`unlabelled-node:${a.id}(${bare})`, a.rect);
+    }
+  }
+
+  if (isScene) {
+    const safeW = width - 2 * R.safeX;
+    // Composition centred: union of everything on screen; a whole-diagram view
+    // counts by its drawing; captions opt out with data-composition-ignore.
+    const parts: Rect[] = [];
+    let skip = false;
+    for (const a of audited) {
+      if (a.el.querySelector('[data-composition-ignore]')) continue;
+      if (a.el.querySelector('[data-layout-intent="asymmetric"]')) skip = true;
+      const probe = a.el.querySelector<HTMLElement>('[data-diagram-scale]');
+      if (probe && probe.dataset.moving === '1') skip = true;
+      const inkRaw = probe && probe.dataset.wholeView === '1' ? diagramInk(probe) : null;
+      parts.push(inkRaw ? toFrame(inkRaw) : a.rect);
+    }
+    if (!skip && parts.length > 0) {
+      const x1 = Math.min(...parts.map((r) => r.x));
+      const x2 = Math.max(...parts.map((r) => r.x + r.w));
+      const off = (x1 + x2) / 2 - width / 2;
+      if (x2 - x1 >= safeW * R.centreMinWidth && Math.abs(off) > safeW * R.centreTol) {
+        add(`off-center:composition(${Math.round(off)}px)`, {x: x1, y: R.safeY, w: x2 - x1, h: 4});
+      }
+    }
+
+    // Arrows (diagram/Arrow exposes data-arrow="x1,y1,x2,y2" in its own svg px).
+    const tips: {x: number; y: number; from: string}[] = [];
+    for (const svgEl of Array.from(scope.querySelectorAll<SVGSVGElement>('svg[data-arrow]'))) {
+      if (svgEl.dataset.arrowDrawn !== '1') continue;
+      const [ax1, ay1, ax2, ay2] = (svgEl.dataset.arrow ?? '').split(',').map(Number);
+      const o = toFrame(svgEl.getBoundingClientRect());
+      const k = 1 / scale;
+      const sx0 = o.x + ax1 * k;
+      const sy0 = o.y + ay1 * k;
+      const ex = o.x + ax2 * k;
+      const ey = o.y + ay2 * k;
+      // Detached ends, arrows through text and crowded labels are covered by the
+      // link-gap, link-cross and link-label rules (EXTRA_RULES), which also
+      // handle elbowed arrows, free ends and zone outlines.
+      const from = `${Math.round(sx0)},${Math.round(sy0)}`;
+      if (tips.some((t) => t.from !== from && Math.hypot(t.x - ex, t.y - ey) < R.arrowTipGap)) {
+        add(`arrow-pileup:${Math.round(ex)},${Math.round(ey)}`, {x: ex - 6, y: ey - 6, w: 12, h: 12});
+      }
+      tips.push({x: ex, y: ey, from});
+    }
+
+    // Side-by-side columns are top-aligned: cluster blocks by x overlap and
+    // compare only the parts of two columns that share vertical span.
+    const colItems = audited.filter(
+      (a) => a.rect.w < safeW * R.fullWidthFrac && !a.el.querySelector('[data-composition-ignore]') && a.rect.y + a.rect.h < R.contentBottom,
+    );
+    const cols: {x1: number; x2: number; items: Rect[]; ids: string[]}[] = [];
+    for (const a of [...colItems].sort((p, q) => p.rect.x - q.rect.x)) {
+      const c = cols.find((k) => a.rect.x < k.x2 - 8 && a.rect.x + a.rect.w > k.x1 + 8);
+      if (c) {
+        c.x1 = Math.min(c.x1, a.rect.x);
+        c.x2 = Math.max(c.x2, a.rect.x + a.rect.w);
+        c.items.push(a.rect);
+        c.ids.push(a.id);
+      } else {
+        cols.push({x1: a.rect.x, x2: a.rect.x + a.rect.w, items: [a.rect], ids: [a.id]});
+      }
+    }
+    const span = (rs: Rect[]) => ({top: Math.min(...rs.map((r) => r.y)), bottom: Math.max(...rs.map((r) => r.y + r.h))});
+    for (let i = 0; i < cols.length; i++) {
+      for (let j = i + 1; j < cols.length; j++) {
+        const si = span(cols[i].items);
+        const sj = span(cols[j].items);
+        const bi = cols[i].items.filter((b) => b.y < sj.bottom && b.y + b.h > sj.top);
+        const bj = cols[j].items.filter((b) => b.y < si.bottom && b.y + b.h > si.top);
+        if (bi.length === 0 || bj.length === 0) continue;
+        const ti = Math.min(...bi.map((b) => b.y));
+        const tj = Math.min(...bj.map((b) => b.y));
+        if (Math.abs(ti - tj) > R.columnTopTol) add(`column-top:${cols[i].ids[0]}+${cols[j].ids[0]}(${Math.round(Math.abs(ti - tj))}px)`, {x: cols[i].x1, y: Math.min(ti, tj), w: cols[j].x2 - cols[i].x1, h: 4});
+      }
     }
   }
 
@@ -170,7 +415,25 @@ export interface RuleCtx {
 const isZone = (el: HTMLElement) => (el.dataset.fit ?? '').startsWith('zone:');
 const distTo = (x: number, y: number, r: DOMRect) =>
   Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
-const linkEls = (scope: Element) => Array.from(scope.querySelectorAll<SVGGeometryElement>('[data-link]'));
+const linkEls = (scope: Element) =>
+  Array.from(scope.querySelectorAll<SVGGeometryElement>('[data-link]')).filter((el) => !hiddenByAncestor(el));
+/** Bounded boxes that are actually on screen (premounted, hidden sequences excluded). */
+const fitEls = (scope: Element) =>
+  Array.from(scope.querySelectorAll<HTMLElement>('[data-fit]')).filter((el) => !hiddenByAncestor(el));
+const imgEls = (scope: Element) => Array.from(scope.querySelectorAll('img')).filter((el) => !hiddenByAncestor(el));
+/** An element's rect clipped by every overflow-hidden ancestor (what is actually painted). */
+const paintedRect = (el: Element): DOMRect | null => {
+  let r = el.getBoundingClientRect();
+  for (let a = el.parentElement; a; a = a.parentElement) {
+    const cs = getComputedStyle(a);
+    if (cs.overflow === 'visible' && cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    const c = a.getBoundingClientRect();
+    const l = Math.max(r.left, c.left), tp = Math.max(r.top, c.top), rr = Math.min(r.right, c.right), b = Math.min(r.bottom, c.bottom);
+    if (rr <= l || b <= tp) return null;
+    r = new DOMRect(l, tp, rr - l, b - tp);
+  }
+  return r;
+};
 /** A connector's points (data-points, in its SVG's user space) mapped to screen coordinates. */
 const linkPoints = (el: SVGGeometryElement): {x: number; y: number}[] => {
   const pts: [number, number][] = JSON.parse(el.getAttribute('data-points') ?? '[]');
@@ -185,8 +448,8 @@ const EXTRA_RULES: ((c: RuleCtx) => void)[] = [];
 const linkGap = ({scope, add, scale}: RuleCtx) => {
   const targets: DOMRect[] = [];
   const zones: DOMRect[] = [];
-  scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => (isZone(el) ? zones : targets).push(el.getBoundingClientRect()));
-  scope.querySelectorAll('img').forEach((el) => targets.push(el.getBoundingClientRect()));
+  fitEls(scope).forEach((el) => (isZone(el) ? zones : targets).push(el.getBoundingClientRect()));
+  imgEls(scope).forEach((el) => targets.push(el.getBoundingClientRect()));
   for (const t of textRects(scope)) targets.push(t.rect);
   linkEls(scope).forEach((el, k) => {
     const pts = linkPoints(el);
@@ -244,10 +507,10 @@ EXTRA_RULES.push(linkGeometry);
 /** link-cross: nothing but the endpoints may touch a box or text. */
 const linkCross = ({scope, add, toFrame, scale}: RuleCtx) => {
   const obstacles: DOMRect[] = [];
-  scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+  fitEls(scope).forEach((el) => {
     if (!isZone(el)) obstacles.push(el.getBoundingClientRect());
   });
-  scope.querySelectorAll('img').forEach((el) => obstacles.push(el.getBoundingClientRect()));
+  imgEls(scope).forEach((el) => obstacles.push(el.getBoundingClientRect()));
   for (const t of textRects(scope)) obstacles.push(t.rect);
   linkEls(scope).forEach((el, k) => {
     const pts = linkPoints(el);
@@ -287,10 +550,10 @@ const linkLabel = ({scope, add, toFrame, scale}: RuleCtx) => {
     const encloses = (o: DOMRect) => o.left <= lr.left + 1 && o.right >= lr.right - 1 && o.top <= lr.top + 1 && o.bottom >= lr.bottom - 1;
     const near = (o: DOMRect) => o.left < lr.right + g && o.right > lr.left - g && o.top < lr.bottom + g && o.bottom > lr.top - g;
     const boxes: DOMRect[] = [];
-    scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+    fitEls(scope).forEach((el) => {
       if (!isZone(el)) boxes.push(el.getBoundingClientRect());
     });
-    scope.querySelectorAll('img').forEach((el) => boxes.push(el.getBoundingClientRect()));
+    imgEls(scope).forEach((el) => boxes.push(el.getBoundingClientRect()));
     for (const t of textRects(scope)) boxes.push(t.rect);
     const own = textRects(lab).map((x) => x.rect);
     const hit = boxes.find((o) => !encloses(o) && near(o) && !own.some((w) => w.left === o.left && w.top === o.top));
@@ -302,7 +565,7 @@ EXTRA_RULES.push(linkLabel);
 /** link-offcenter: landings on each box edge are centered on that edge. */
 const linkOffCenter = ({scope, add, toFrame, scale}: RuleCtx) => {
   const boxes: {el: HTMLElement; r: DOMRect}[] = [];
-  scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+  fitEls(scope).forEach((el) => {
     if (!isZone(el)) boxes.push({el, r: el.getBoundingClientRect()});
   });
   const hits = new Map<string, {r: DOMRect; edge: string; pts: number[]; name: string}>();
@@ -342,13 +605,14 @@ EXTRA_RULES.push(linkOffCenter);
 /** marker-over: visible [data-marker] elements do not overlap boxes or text. */
 const markerOver = ({scope, add, toFrame}: RuleCtx) => {
   scope.querySelectorAll<HTMLElement | SVGElement>('[data-marker]').forEach((mk, k) => {
+    if (hiddenByAncestor(mk)) return;
     const mr = mk.getBoundingClientRect();
     if (mr.width === 0 && mr.height === 0) return;
     const cs = getComputedStyle(mk);
     if (parseFloat(cs.opacity || '1') < 0.5 || cs.visibility === 'hidden') return;
     const over = (o: DOMRect) => o.left < mr.right && o.right > mr.left && o.top < mr.bottom && o.bottom > mr.top;
     let hit = false;
-    scope.querySelectorAll<HTMLElement>('[data-fit]').forEach((el) => {
+    fitEls(scope).forEach((el) => {
       if (hit || isZone(el) || el.contains(mk)) return;
       const r = el.getBoundingClientRect();
       const wrapsDiagram = r.width > 600 && r.height > 300;
@@ -368,8 +632,9 @@ const contentBounds = ({scope, add, toFrame, scale}: RuleCtx) => {
     const outside = (r: DOMRect) => r.width > 0 && (r.right > box.right + tol || r.left < box.left - tol);
     for (const t of textRects(cb)) if (outside(t.rect)) add(`content-bounds:text@${Math.round(t.rect.x)}`, toFrame(t.rect));
     cb.querySelectorAll<Element>('[data-fit],img,svg:not(:has([data-link])),[data-link]').forEach((el, k) => {
-      const r = el.getBoundingClientRect();
-      if (outside(r)) add(`content-bounds:${el.getAttribute('data-fit') ?? el.tagName.toLowerCase()}#${k}`, toFrame(r));
+      if (hiddenByAncestor(el)) return;
+      const r = paintedRect(el);
+      if (r && outside(r)) add(`content-bounds:${el.getAttribute('data-fit') ?? el.tagName.toLowerCase()}#${k}`, toFrame(r));
     });
   });
 };

@@ -98,7 +98,13 @@ export const Arrow: React.FC<{
 
   return (
     <div style={{position: 'absolute', left: minX, top: minY, width: bw, height: bh, pointerEvents: 'none'}}>
-      <svg width={bw} height={bh}>
+      {/* data-arrow: start and tip in this svg's px, read by the arrow pile-up check */}
+      <svg
+        width={bw}
+        height={bh}
+        data-arrow={`${local[0][0]},${local[0][1]},${tx},${ty}`}
+        data-arrow-drawn={p > 0.92 ? '1' : undefined}
+      >
         <path
           data-link={label ?? 'arrow'}
           data-points={JSON.stringify(local)}
@@ -131,6 +137,7 @@ export const Arrow: React.FC<{
       {label ? (
         <div
           data-link-label
+          data-arrow-label
           style={{
             position: 'absolute',
             left: mid[0] + labelOffset.dx,

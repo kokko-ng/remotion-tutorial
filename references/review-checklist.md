@@ -24,8 +24,19 @@ editable in `RULES`:
 | `overflow:<name>` | text or content spills out of a `[data-fit]` box |
 | `inset:<name>` | text closer than 8px to a bordered `[data-fit]` box's edge |
 | `overlap:a+b` | two audited blocks intersect (nested blocks are exempt) |
-| `tight:a+b(Npx)` | two audited blocks closer than 12px |
+| `tight:a+b(Npx)` | two audited blocks closer than 16px (`minGap`) |
 | `bounds:<id>` / `text-bounds:x,y` | outside the safe area or inside the subtitle band |
+| `duplicate-id:<id>` | two visible audited blocks share an id (the audit would merge them) |
+| `text-overflow:<id>` | an audited block's text ink spills sideways out of it (a nowrap tag running off the frame) |
+| `clipped-text:<id>` | text cut off by an overflow-hidden box; mark deliberate crops `data-clip-intended` |
+| `illegible-text:<id>(Npx)` | a settled diagram view shows a label smaller than 16px (`minLabelPx`): an overview held too long |
+| `cropped-label:<id>` | a diagram zoom slices a label at the viewport edge; use `frameNodes` |
+| `unlabelled-node:<id>` | a diagram zoom shows a node box without its name |
+| `off-center:<id>` | a composition wider than 60 percent of the safe width is more than 5 percent off centre; opt out with `data-layout-intent="asymmetric"` or exclude chrome with `data-composition-ignore` |
+| `arrow-detached` | an arrow end is more than 14px from any audited box |
+| `arrow-through-text` | an arrow or its label crosses text |
+| `arrow-pileup` | two arrow heads from different tails land within 10px of each other |
+| `column-top:a+b(Npx)` | side-by-side columns start more than 24px apart vertically (full-width rows are exempt) |
 | `wordFrame: "..." not found` | a reveal cue is not in the narration, so it fires at frame 0 |
 | `link-gap:<arrow>:<end>(Npx)` | an arrow end does not touch a box, image, text or zone outline (10px); `free` opts a flow arrow out |
 | `link-short` | an arrow shorter than 48px reads as a stub; move the boxes apart |
@@ -43,10 +54,29 @@ that the earlier checks passed. When a reviewer finds a new class of blemish,
 add a rule for the class (and prove it on a seeded example) rather than
 fixing only the instance.
 
+Every rule except `wordFrame` and `inset` came from a defect a human found in
+a still that the sweep had passed. When that happens again, add the rule, add
+an element that breaks it to the `devfail` fixture, and extend
+`scripts/layout_selftest.sh`.
+
 Exit 0 means clean, 1 means findings, 2 means a render failed (a failed
 render is never reported as clean). Fix every finding, rerun the chapter,
-and only then move to the stills. Prove the sweep on a new component by
-seeding a too-narrow box once and confirming it is flagged.
+and only then move to the stills.
+
+Prove the sweep can fail before trusting it clean:
+
+```bash
+scripts/layout_selftest.sh videos/<slug>
+```
+
+It sweeps the template's development chapters: `devfail`
+(`src/scenes/dev/DevLayoutFixture.tsx`, `DevColumnFixture.tsx`) breaks every
+rule on purpose and must report each one; `dev` (`DevPreview.tsx`) is a clean
+composition and must report none. Both carry `dev: true` in `scenes.json`, so
+the default sweep, stills and renders skip them. Run it after any change to a
+rule, `audit.tsx` or a kit component. A rule that suddenly reports nothing
+anywhere deserves suspicion: two rules once passed everything because of a
+selector bug and an over-generous exemption.
 
 ## Stills for a human audit
 
@@ -56,7 +86,9 @@ scripts/export_stills.sh videos/<slug>        # stills/chNN/<sceneId>.png
 
 One still per scene at its fullest moment: the sweep logs a density score
 (text runs, images, audited blocks) per sampled second, and the densest frame
-(latest on ties) is rendered at full resolution without overlays. Scenes that
+with no `[layout]` finding (latest on ties; a frame with findings only when
+every sampled frame has one) is rendered at full resolution without
+overlays. Scenes that
 cut between shots show their busiest shot. Hand `stills/` to the user before
 rendering.
 
