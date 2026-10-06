@@ -68,6 +68,22 @@ ones lands like a breath.
   ear; go easy on interview phrasing.
 - Curiosity: lean hardest on intuition, history, and mental models.
 
+## Fireship walkthrough voice
+
+Codebase walkthroughs use a different register: fast, dry, confident,
+self-contained episodes that open cold on a failure or a gag. The full style
+guide is `briefs/STYLE.md` (copy it into the project and fill the
+placeholders). The essentials:
+
+- Cold open in the first sentence; no "in this episode we will".
+- Short declaratives, a joke per beat at most, and the joke never costs
+  accuracy: every number and name matches the repository exactly.
+- Inferred rationale is said as inference, out loud.
+- One recurring through-line sentence, returned to once per chapter.
+- Each recurring gag and stock opener is owned by one chapter; parallel
+  writers otherwise reuse them.
+- The classroom-gimmick ban above still applies.
+
 ## Substantive, not shallow
 
 ELI5 is a tone, not a content level. Name the real terms, the genuine

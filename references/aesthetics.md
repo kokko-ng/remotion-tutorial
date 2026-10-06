@@ -49,7 +49,10 @@ any of them is a review finding:
   the template background.
 - No glassmorphism, no backdrop blur, no frosted cards.
 - No drop shadows, except paper's one built-in 4 percent soft shadow.
-- No emoji, no icon fonts, no clip art, no stock imagery.
+- No emoji, no icon fonts, no clip art, no stock imagery. Exception for
+  codebase walkthroughs: a few credited image gags (generated, or openly
+  licensed stock) shown in the kit's `ImageCut` window with the credit in its
+  title bar, and official cloud architecture icons (rules below).
 - Maximum two typefaces plus the mono, and they come from the preset.
 - One emphasis accent per scene. The other accents carry stable meaning
   across the whole video (e.g. green = data tier everywhere), never
@@ -60,6 +63,45 @@ any of them is a review finding:
 - Motion is meaning: an element animates when the narration introduces it,
   not because idle motion looks lively. No floating, no pulsing except the
   Arrow traffic dot, no parallax.
+
+## Craft floor (applies to every preset)
+
+These came from a design review of a terminal-preset walkthrough (the
+Impeccable skill's `detect` plus its craft references) and hold for all
+presets:
+
+- Muted ink meets 4.5:1 contrast against the background; diagram lines and
+  labels too.
+- No side-stripe borders thicker than 1px, no eyebrow labels above headings,
+  no decorative window chrome (traffic-light dots) unless the window is a
+  real terminal or editor being quoted.
+- Mono only for code, paths and literal values; prose labels use the body
+  face.
+- One focal motion per beat (for a diagram, the camera snap to the node being
+  spoken); everything else hard cuts.
+- Big showcases (a wide window, a whole diagram, a row of cards) are centred
+  in the frame; the `off-center` rule enforces it. Side-by-side columns start
+  at the same top (`column-top`).
+
+## Diagrams on a dark background
+
+Repository diagrams are shown as their own SVG, recoloured for the preset by
+`scripts/darken_diagrams.py`: fills and ink mapped to tokens, lines raised to
+a visible contrast, labels enlarged, embedded icons kept byte for byte. Never
+put a CSS `filter: invert()` on a diagram (it inverts icons and brand
+colours), and never redraw a diagram by hand (it drifts from the source).
+The kit's `DiagramShot` frames zooms with `frameNodes` so whole nodes, with
+their names, are in view; the layout sweep flags labels under 16px, sliced
+labels and unnamed boxes.
+
+## Cloud service icons
+
+Official architecture icon sets (for example Azure's) are allowed under their
+terms: unmodified, at a uniform scale, each with its service name next to
+it, and only for the product it represents (no Cache for Redis icon on an
+Azure Managed Redis slide). Never draw over an icon; to retire a service,
+strike its name through instead. No third-party product logos beyond those
+sets.
 
 ## Motion correctness
 
