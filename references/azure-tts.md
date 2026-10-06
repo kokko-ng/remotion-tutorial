@@ -61,10 +61,24 @@ with one `<speak>` document per scene and no `synthesisConfig`:
   `<sub alias>`; longest keys match first, whole tokens only. Use it for
   units and symbols the voice reads badly (`GiB`, `140-2`).
 
-Word boundaries for a `<sub>` term can come back as the alias rather than the
-display text, which then shows up in the subtitles. Synthesize one scene with
-the lexicon terms and read its `words.json` before running the full job; if
-the alias appears, map it back before `build_srt.py` or drop that entry.
+Azure reports word boundaries for a `<sub>` term as the alias tokens followed
+by a stray token that starts with `">` and carries the display text and the
+next word (`gibibytes`, `">GiB per`). `generate_voiceover.py` collapses those
+back into one token with the display text, so `words.json` and the subtitles
+show `GiB`. Verified with en-US-AndrewMultilingualNeural.
+
+## Pronunciation QA
+
+```bash
+python3 scripts/pronunciation_qa.py --project videos/<slug> --resource-name <r> --resource-group <rg>
+```
+
+Transcribes every scene with Azure fast transcription (same Speech resource)
+and diffs it against the narration, listing spans with acronyms, mixed-case
+names or numbers that come back different. Most rows are formatting noise;
+the real finds are terms heard as other words (a cmdlet's `Az` read as
+"A's", `NIC` as "NC", `CNAME` as "name"). Add lexicon entries for those and
+resynthesize only the affected scenes with `--scenes`.
 
 ## Word timestamps
 

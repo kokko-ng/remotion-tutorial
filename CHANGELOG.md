@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1
+
+- `generate_voiceover.py`: SSML `<sub alias>` word boundaries are mapped back
+  to the display text (Azure returns the alias plus a stray `">` token), so
+  lexicon entries no longer corrupt words.json or subtitles.
+- New `scripts/pronunciation_qa.py`: transcribes each scene with Azure fast
+  transcription and diffs it against the narration to find misread acronyms
+  and names.
+
 ## 1.1.0
 
 - Automated layout sweep: `scripts/layout_sweep.sh` renders a new
