@@ -38,11 +38,20 @@ def chunk_words(words, max_chars, max_ms, gap_ms):
             chunks.append(cur)
         cur = None
 
+    open_quote = False   # straight quotes: odd occurrences open, even close
+    pending = ""         # opening punctuation waiting for the next word
     for tok in words:
         text = tok["text"]
         start = tok["startMs"]
         end = tok["startMs"] + tok["durationMs"]
 
+        if tok.get("punct") and text in ('"', "\u201c", "(", "["):
+            opening = text != '"' or not open_quote
+            if text == '"':
+                open_quote = not open_quote
+            if opening:
+                pending += text
+                continue
         if tok.get("punct"):
             if cur:
                 cur["text"] = cur["text"].rstrip() + text + " "
@@ -62,7 +71,8 @@ def chunk_words(words, max_chars, max_ms, gap_ms):
 
         if cur is None:
             cur = {"text": "", "startMs": start, "endMs": end, "words": []}
-        cur["text"] += text + " "
+        cur["text"] += pending + text + " "
+        pending = ""
         cur["endMs"] = max(cur["endMs"], end)
         cur["words"].append({"text": text, "startMs": start, "endMs": end})
 

@@ -26,7 +26,11 @@ export const Group: React.FC<{
   const perimeter = 2 * (w + h);
   return (
     <>
-      <div style={{position: 'absolute', left: x, top: y, width: w, height: h, pointerEvents: 'none'}}>
+      <div
+        data-fit={`zone:${title}`}
+        data-zone-inset={48}
+        style={{position: 'absolute', left: x, top: y, width: w, height: h, pointerEvents: 'none'}}
+      >
         <svg width={w} height={h} style={{position: 'absolute', inset: 0}}>
           <rect
             x={1.5}
