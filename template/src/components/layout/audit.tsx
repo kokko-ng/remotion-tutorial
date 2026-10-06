@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
+import {runLayoutChecks, type Rect} from './checks';
 
 /**
  * Layout audit for the aesthetic review loop. Scenes wrap elements that must
@@ -14,9 +15,14 @@ import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
  * --props='{"debugLayout":true}', an overlay outlines every audited element:
  * blue when fine, red when it overlaps a sibling or breaks the safe margin.
  * Do not wrap connectors (arrows/edges); they legitimately cross nodes.
+ *
+ * The overlay also runs runLayoutChecks (checks.ts): text overflowing any
+ * [data-fit] container, text too close to a bordered container's edge, blocks
+ * closer than RULES.minGap, and anything outside the safe area or inside the
+ * subtitle band. Every finding is logged as "[layout] <scene> f<frame> <id>"
+ * so scripts/layout_sweep.sh can collect them across a whole chapter.
  */
 
-type Rect = {x: number; y: number; w: number; h: number};
 type Registry = Map<string, HTMLElement>;
 
 interface AuditApi {
@@ -28,8 +34,9 @@ const AuditContext = createContext<AuditApi | null>(null);
 
 export const AuditProvider: React.FC<{
   enabled: boolean;
+  sceneId?: string;
   children: React.ReactNode;
-}> = ({enabled, children}) => {
+}> = ({enabled, sceneId = '', children}) => {
   const [registry] = useState<Registry>(() => new Map());
   // bumped on every register/unregister so the overlay re-measures after
   // scenes mount content asynchronously (e.g. once word timings load)
@@ -47,8 +54,10 @@ export const AuditProvider: React.FC<{
   if (!enabled) return <>{children}</>;
   return (
     <AuditContext.Provider value={api}>
-      {children}
-      <AuditOverlay registry={registry} version={version} />
+      <AbsoluteFill data-audit-scope>
+        {children}
+        <AuditOverlay registry={registry} version={version} sceneId={sceneId} />
+      </AbsoluteFill>
     </AuditContext.Provider>
   );
 };
@@ -91,12 +100,10 @@ const unionChildRects = (el: HTMLElement): DOMRect | null => {
   return acc;
 };
 
-const intersects = (a: Rect, b: Rect): boolean =>
-  a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-
-const AuditOverlay: React.FC<{registry: Registry; version: number}> = ({
+const AuditOverlay: React.FC<{registry: Registry; version: number; sceneId: string}> = ({
   registry,
   version,
+  sceneId,
 }) => {
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
@@ -105,43 +112,39 @@ const AuditOverlay: React.FC<{registry: Registry; version: number}> = ({
 
   useLayoutEffect(() => {
     const c = containerRef.current?.getBoundingClientRect();
-    if (!c || c.width === 0) return;
+    const scope = containerRef.current?.parentElement;
+    if (!c || c.width === 0 || !scope) return;
     const sx = width / c.width;
     const sy = height / c.height;
-    const items: {id: string; rect: Rect}[] = [];
+    const toFrame = (m: DOMRect): Rect => ({x: (m.x - c.x) * sx, y: (m.y - c.y) * sy, w: m.width * sx, h: m.height * sy});
+    const audited: {id: string; el: HTMLElement; rect: Rect}[] = [];
     for (const [id, el] of registry) {
       const m = unionChildRects(el);
       if (!m) continue;
-      items.push({
-        id,
-        rect: {x: (m.x - c.x) * sx, y: (m.y - c.y) * sy, w: m.width * sx, h: m.height * sy},
-      });
+      audited.push({id, el, rect: toFrame(m)});
     }
-    const bad = new Set<string>();
-    for (let i = 0; i < items.length; i++) {
-      for (let j = i + 1; j < items.length; j++) {
-        if (intersects(items[i].rect, items[j].rect)) {
-          bad.add(items[i].id);
-          bad.add(items[j].id);
-        }
-      }
-    }
-    const mx = width * 0.05;
-    const my = height * 0.05;
-    for (const it of items) {
-      const r = it.rect;
-      if (r.x < mx - 1 || r.y < my - 1 || r.x + r.w > width - mx + 1 || r.y + r.h > height - my + 1) {
-        bad.add(it.id);
-      }
-    }
-    const next = items.map((it) => ({...it, bad: bad.has(it.id)}));
+    const findings = runLayoutChecks({
+      scope,
+      audited,
+      toFrame,
+      scale: 1 / sx,
+      isScene: !sceneId.endsWith(':chrome'),
+      width,
+      height,
+    });
+    const badIds = new Set(findings.map((f) => f.id.split(':')[1]?.split(/[+(]/)[0]));
+    const next = [
+      ...audited.map((a) => ({id: a.id, rect: a.rect, bad: badIds.has(a.id)})),
+      ...findings.map((f) => ({id: f.id, rect: f.rect, bad: true})),
+    ];
+    for (const f of findings) console.warn(`[layout] ${sceneId} f${frame} ${f.id}`);
     setBoxes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
-  }, [frame, registry, version, width, height]);
+  }, [frame, registry, version, width, height, sceneId]);
 
   const mx = width * 0.05;
   const my = height * 0.05;
   return (
-    <AbsoluteFill ref={containerRef} style={{pointerEvents: 'none'}}>
+    <AbsoluteFill ref={containerRef} data-audit-overlay style={{pointerEvents: 'none'}}>
       <div
         style={{
           position: 'absolute',

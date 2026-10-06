@@ -11,6 +11,8 @@ import {sceneRegistry} from '../scenes';
 export interface ChapterProps extends Record<string, unknown> {
   chapterId: string;
   debugLayout?: boolean;
+  /** false skips voiceover audio (used by the layout sweep). */
+  audio?: boolean;
 }
 
 const Background: React.FC = () => {
@@ -29,7 +31,7 @@ const Background: React.FC = () => {
   );
 };
 
-export const Chapter: React.FC<ChapterProps> = ({chapterId, debugLayout = false}) => {
+export const Chapter: React.FC<ChapterProps> = ({chapterId, debugLayout = false, audio = true}) => {
   const scenes = chapterScenes(chapterId);
   let offset = 0;
   return (
@@ -46,10 +48,10 @@ export const Chapter: React.FC<ChapterProps> = ({chapterId, debugLayout = false}
           );
         }
         return (
-          <Sequence key={scene.id} from={from} durationInFrames={frames} name={scene.id}>
-            <AuditProvider enabled={debugLayout}>
-              {scene.durationSec > 0 ? (
-                <Audio src={staticFile(`audio/${scene.id}.wav`)} />
+          <Sequence key={scene.id} from={from} durationInFrames={frames} name={scene.id} premountFor={manifest.fps}>
+            <AuditProvider enabled={debugLayout} sceneId={scene.id}>
+              {audio && scene.durationSec > 0 ? (
+                <Audio src={staticFile(`audio/${scene.id}.wav`)} premountFor={manifest.fps} />
               ) : null}
               <SceneComp sceneId={scene.id} />
               <Subtitles sceneId={scene.id} />

@@ -26,6 +26,7 @@ export const Subtitles: React.FC<{sceneId: string}> = ({sceneId}) => {
 
   return (
     <AbsoluteFill
+      data-subtitles
       style={{
         justifyContent: 'flex-end',
         alignItems: 'center',

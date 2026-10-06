@@ -2,6 +2,7 @@ import React from 'react';
 import {Composition, Sequence} from 'remotion';
 import './theme/fonts';
 import {Chapter, type ChapterProps} from './chapters/Chapter';
+import {LayoutCheck, layoutSamples} from './LayoutCheck';
 import {
   chapterDurationFrames,
   manifest,
@@ -51,6 +52,19 @@ export const RemotionRoot: React.FC = () => {
           })}
         />
       ))}
+      {/* Dev-only: the layout sweep (scripts/layout_sweep.sh) renders this. */}
+      <Composition
+        id="LayoutCheck"
+        component={LayoutCheck}
+        fps={manifest.fps}
+        width={manifest.width}
+        height={manifest.height}
+        defaultProps={{chapterId: manifest.chapters[0]?.id ?? 'ch01', everySec: 2}}
+        calculateMetadata={({props}) => ({
+          durationInFrames: Math.max(1, layoutSamples(props.chapterId, props.everySec).length),
+          props,
+        })}
+      />
       <Composition
         id="Full"
         component={FullVideo}
