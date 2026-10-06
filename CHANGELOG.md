@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.2.0
+
+- Codebase walkthrough mode: `references/codebase-walkthrough.md` is the
+  default structure for Fireship-style onboarding videos about a repository
+  (outline, parallel writers, humanizer, three audits, SSML voice, assets,
+  design craft floor, scenes, linter, human stills review, temporary cloud
+  resources). `references/gotchas.md` records every pitfall the method hit,
+  and `references/briefs/` holds the subagent brief templates (style, audit,
+  fix, SSML, scene guide).
+- New layout rules in `checks.ts`: `duplicate-id`, `text-overflow`,
+  `clipped-text`, `illegible-text`, `cropped-label`, `unlabelled-node`,
+  `off-center`, `arrow-detached`, `arrow-through-text`, `arrow-pileup`,
+  `column-top`. `minGap` is 16px (was 12px).
+- `scripts/layout_selftest.sh` and the `dev`/`devfail` template chapters
+  prove every rule trips on a fixture and none on a clean preview. Chapters
+  marked `"dev": true` are skipped by default sweeps, stills and renders.
+- `export_stills.sh` prefers the fullest frame with no layout finding.
+- Scene kit (`template/src/components/kit/`): `DiagramShot` with
+  label-safe `frameNodes` zooms, `CodeFile`, `Terminal`, `Window`, `Slam`,
+  `Tag`, `Stamp`, `Note`, `AdrCard`, `Recap`, `EpisodeSting`, `ImageCut`,
+  `AzureIcon`, `useSceneWords` (wraps `wordFrame`).
+- `generate_voiceover.py`: authored per-scene `ssml`; prosody is flattened so
+  `<break>` and `<emphasis>` never sit inside `<prosody>` (Azure ignores or
+  rejects them there, which the whole-scene wrap triggered); emphasis is
+  unwrapped for voices that do not support it; `sentenceGap`; word events are
+  aligned to the subtitle words by sequence.
+- New scripts: `validate_ssml.py`, `darken_diagrams.py` (recolour repository
+  SVG diagrams for dark presets and emit node and label regions),
+  `generate_images.py` (FLUX.2 [pro] on Azure AI Foundry with provenance
+  sidecars), `build_credits.py`.
+- Word budgets are calibrated per voice and rate instead of a fixed 155 wpm.
+
 ## 1.1.2
 
 - `wordFrame` matches across multi-word boundary tokens (Azure returns some

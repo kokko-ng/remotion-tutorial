@@ -6,8 +6,11 @@ description: >-
   3Blue1Brown or Primer, with an Azure TTS voiceover, burned-in subtitles, and
   an exported .srt file. Use when the user asks for a tutorial video, explainer
   video, narrated video, video course, animated lesson, or "turn this topic
-  into a video". Parameterized by topic, duration (default 60 minutes),
-  aesthetic preset, and audience level. Requires macOS/Linux with node, ffmpeg,
+  into a video". Also produces Fireship-style codebase walkthroughs
+  (architecture onboarding videos grounded in a repository's docs, decision
+  records, code and diagrams): use when the user asks for a video tour,
+  onboarding video or architecture walkthrough of a codebase. Parameterized by
+  topic, duration (default 60 minutes), aesthetic preset, and audience level. Requires macOS/Linux with node, ffmpeg,
   python3, and an Azure subscription with a Speech or AIServices resource.
 ---
 
@@ -24,6 +27,20 @@ explaining something they love (see `references/narration-voice.md` and
 `references/humanizer.md`). The visuals must look like a hand-crafted math
 channel, not a slide deck (see `references/aesthetics.md`). Neither is
 optional.
+
+## Codebase walkthrough mode
+
+When the subject is a codebase (an architecture walkthrough, an onboarding
+tour, "explain this repo as a video"), follow
+`references/codebase-walkthrough.md` as the structure for the whole job: it
+replaces Steps 2 and 3 below (episodic chapters with cold opens and recaps,
+parallel writers, a humanizer pass, three sequential audits) and adds the
+asset, diagram, design and review steps on top of Steps 4 to 10. It was
+proven end to end on a 90-minute, 10-chapter walkthrough; every pitfall it
+hit is in `references/gotchas.md`, and the briefs it hands to subagents are
+templates in `references/briefs/`. Default preset: `terminal`. Grounding
+comes from the repository, not the web (`references/grounding.md` still
+applies to any external claim).
 
 ## Step 0: Preflight
 
@@ -57,9 +74,13 @@ Collect or infer:
   `<preset>-title.png` a title card), then let them pick.
 - **audience**: beginner, practitioner, or interview prep
 
-Word budget: duration x 155 words per minute (measured for
-en-US-AvaMultilingualNeural at rate -4%). A 60-minute video is roughly
-9,300 words; a 90-second demo is about 230.
+Word budget: duration x the words per minute of the chosen voice and rate.
+Measure it on one sample scene before budgeting; do not assume a figure.
+Explainer pace is about 155 wpm (en-US-AvaMultilingualNeural at -4%, so 60
+minutes is roughly 9,300 words); Fireship pace is far faster (en-US-
+DavisNeural at +8% ran about 210 wpm, and budgeting a walkthrough at 155 wpm
+undershot its target length by 20 percent). Land the final length with the
+global rate and sentence gap, not by padding words.
 
 ## Step 2: Outline and grounding (user checkpoint)
 
@@ -146,8 +167,11 @@ Write one component per scene in `src/scenes/`, register it in
 
 - Compose only from the component library (`TitleCard`, `SectionHeading`,
   `diagram/Node`, `diagram/Group`, `diagram/Arrow`, `EquationBlock`,
-  `GraphPlot`, `CodePanel`, `Callout`) and theme tokens. Never hardcode a
-  color, font, or radius.
+  `GraphPlot`, `CodePanel`, `Callout`), the kit in `src/components/kit/`
+  (`DiagramShot`, `CodeFile`, `Terminal`, `Window`, `Slam`, `Tag`, `Stamp`,
+  `Note`, `AdrCard`, `AzureIcon`, `ImageCut`, `Recap`, `EpisodeSting`,
+  `useSceneWords`; see `references/briefs/SCENE-GUIDE.md`) and theme tokens.
+  Never hardcode a color, font, or radius.
 - Place content inside `<SafeArea>` (the 5 percent margin). SafeArea
   coordinates run 0 to 1728 x 0 to 972 at 1080p. Keep everything above y=820:
   the bottom band belongs to subtitles.
@@ -178,13 +202,21 @@ python3 scripts/review_stills.py --project videos/<slug> --shift 5 --debug   # p
 ```
 
 The layout sweep runs first and must exit 0. It renders every scene every 2
-seconds (plus its last frame) with the layout audit on and fails on any text
-overflowing its box, text closer than 8px to a bordered edge, blocks
-overlapping or closer than 12px, anything outside the safe area or in the
-subtitle band, and any `wordFrame` cue that is not in the narration. Stills
-sample 4 to 5 frames per scene; the sweep covers the rest. Before rendering,
+seconds (plus its last frame) with the layout audit on and fails on every
+rule in `src/components/layout/checks.ts` (table in
+`references/review-checklist.md`): text overflowing its box or the frame,
+text closer than 8px to a bordered edge, blocks overlapping or closer than
+16px, anything outside the safe area or in the subtitle band, clipped text,
+duplicate audit ids, illegible, sliced or unnamed diagram labels, an
+off-centre composition, detached or piled-up arrows and arrows through text,
+side-by-side columns with different tops, and any `wordFrame` cue that is not
+in the narration. After changing a rule or a kit component, run
+`scripts/layout_selftest.sh videos/<slug>`: the `devfail` fixture must trip
+every rule and the `dev` preview none. Stills sample 4 to 5 frames per scene;
+the sweep covers the rest. Before rendering,
 `scripts/export_stills.sh videos/<slug>` writes one full-resolution still per
-scene (its fullest moment) to `stills/` for the user's visual audit.
+scene (its fullest frame with no layout finding) to `stills/` for the user's
+visual audit; turn every finding the user makes there into a rule.
 
 Pass 1: look at every still with the Read tool against the checklist
 (clipping, overlap, margins, subtitle collisions, contrast, token
