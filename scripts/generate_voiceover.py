@@ -55,11 +55,12 @@ Usage:
     python3 generate_voiceover.py ... --scenes s02,s05    # regenerate a subset
     python3 generate_voiceover.py ... --dry-run           # print request JSON only
 """
+
 import argparse
 import io
-import re
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -79,8 +80,21 @@ def get_key(resource, group, subscription):
     env = os.environ.get("SPEECH_KEY")
     if env:
         return env
-    cmd = ["az", "cognitiveservices", "account", "keys", "list",
-           "-n", resource, "-g", group, "--query", "key1", "-o", "tsv"]
+    cmd = [
+        "az",
+        "cognitiveservices",
+        "account",
+        "keys",
+        "list",
+        "-n",
+        resource,
+        "-g",
+        group,
+        "--query",
+        "key1",
+        "-o",
+        "tsv",
+    ]
     if subscription:
         cmd += ["--subscription", subscription]
     out = subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -112,12 +126,14 @@ def is_punct(text):
 def normalize_words(raw):
     words = []
     for entry in raw:
-        words.append({
-            "text": entry["Text"],
-            "startMs": entry["AudioOffset"],
-            "durationMs": entry["Duration"],
-            "punct": is_punct(entry["Text"]),
-        })
+        words.append(
+            {
+                "text": entry["Text"],
+                "startMs": entry["AudioOffset"],
+                "durationMs": entry["Duration"],
+                "punct": is_punct(entry["Text"]),
+            }
+        )
     return words
 
 
@@ -146,17 +162,29 @@ def restore_display(words, lexicon):
         alias_parts = [a for a in re.split(r"\s+", lexicon[key]) if a]
         n = len(alias_parts)
         tail = [x for x in out[-n:] if not x["punct"]] if n else []
-        if n and len(tail) == n and " ".join(x["text"] for x in tail).lower().replace("-", " ") == " ".join(alias_parts).lower().replace("-", " "):
+        if (
+            n
+            and len(tail) == n
+            and " ".join(x["text"] for x in tail).lower().replace("-", " ")
+            == " ".join(alias_parts).lower().replace("-", " ")
+        ):
             first, last = out[-n], out[-1]
             del out[-n:]
-            out.append({"text": key, "startMs": first["startMs"],
-                        "durationMs": last["startMs"] + last["durationMs"] - first["startMs"], "punct": False})
+            out.append(
+                {
+                    "text": key,
+                    "startMs": first["startMs"],
+                    "durationMs": last["startMs"] + last["durationMs"] - first["startMs"],
+                    "punct": False,
+                }
+            )
         else:
             out.append({"text": key, "startMs": w["startMs"], "durationMs": 0, "punct": False})
-        rest = body[len(key):].strip()
+        rest = body[len(key) :].strip()
         for piece in re.findall(r"[^\s.,;:!?]+|[.,;:!?]", rest):
-            out.append({"text": piece, "startMs": w["startMs"], "durationMs": w["durationMs"],
-                        "punct": is_punct(piece)})
+            out.append(
+                {"text": piece, "startMs": w["startMs"], "durationMs": w["durationMs"], "punct": is_punct(piece)}
+            )
     return out
 
 
@@ -207,7 +235,8 @@ def flatten_prosody(inner, rate):
     same stack are re-wrapped in nested <prosody>, and <break> and <emphasis>
     are emitted between them."""
     import xml.etree.ElementTree as ET
-    from xml.sax.saxutils import escape as esc, quoteattr
+    from xml.sax.saxutils import escape as esc
+    from xml.sax.saxutils import quoteattr
 
     def serial(el):
         attrs = "".join(f" {k}={quoteattr(v)}" for k, v in el.attrib.items())
@@ -269,6 +298,7 @@ def spoken_plan(scene, inner):
     (subtitle) word it belongs to: a <sub> alias is several spoken words for
     one visible word, everything else is one to one."""
     import xml.etree.ElementTree as ET
+
     visible = scene["text"].replace("[beat]", " ").split()
     plan, vi = [], 0
 
@@ -304,6 +334,7 @@ def align_words(scene, inner, raw):
     planned spoken words by sequence alignment (only event timings are kept).
     Returns (words, matched_ratio)."""
     import difflib
+
     visible, plan = spoken_plan(scene, inner)
     events = []
     for e in raw:
@@ -329,7 +360,7 @@ def align_words(scene, inner, raw):
             prev = next((times[i] for i in range(k - 1, -1, -1) if times[i]), (0, 0))
             times[k] = (prev[0] + prev[1], 0)
     span = {}
-    for (_, vi), (start, dur) in zip(plan, times):
+    for (_, vi), (start, dur) in zip(plan, times, strict=True):
         s0, e0 = span.get(vi, (start, start + dur))
         span[vi] = (min(s0, start), max(e0, start + dur))
     out = []
@@ -339,7 +370,7 @@ def align_words(scene, inner, raw):
         end = max(end, start)
         core = w.rstrip(".,;:!?")
         out.append({"text": core or w, "startMs": start, "durationMs": end - start, "punct": False})
-        for ch in w[len(core):]:
+        for ch in w[len(core) :]:
             out.append({"text": ch, "startMs": end, "durationMs": 0, "punct": True})
     return out, matched / max(1, len(plan))
 

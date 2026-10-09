@@ -17,10 +17,9 @@ OUT=${TMPDIR:-/tmp}/layout-sweep-$(basename "$PWD"); mkdir -p "$OUT"
 EVERY=${SWEEP_EVERY_SEC:-2}
 status=0
 for ch in $CHS; do
-  npx remotion render src/index.ts LayoutCheck "$OUT/$ch.mp4" \
+  if ! npx remotion render src/index.ts LayoutCheck "$OUT/$ch.mp4" \
     --props="{\"chapterId\":\"$ch\",\"everySec\":$EVERY}" \
-    --scale=0.5 --muted --log=verbose > "$OUT/$ch.log" 2>&1
-  if [ $? -ne 0 ]; then
+    --scale=0.5 --muted --log=verbose > "$OUT/$ch.log" 2>&1; then
     status=2
     echo "$ch: RENDER FAILED (see $OUT/$ch.log)"
     grep -m3 -i "error" "$OUT/$ch.log" | sed 's/^/  /'

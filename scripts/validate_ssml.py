@@ -10,6 +10,7 @@ Exit 1 on any failure.
 Usage:
     python3 validate_ssml.py script/ch01.json [script/ch02.json ...]
 """
+
 import json
 import re
 import sys
@@ -61,7 +62,9 @@ def check_scene(scene):
     if got != expected:
         a, b = expected.split(" "), got.split(" ")
         i = next((k for k in range(min(len(a), len(b))) if a[k] != b[k]), min(len(a), len(b)))
-        errors.append(f"{scene['id']}: words differ at word {i}: text={' '.join(a[i:i + 8])!r} ssml={' '.join(b[i:i + 8])!r}")
+        errors.append(
+            f"{scene['id']}: words differ at word {i}: text={' '.join(a[i : i + 8])!r} ssml={' '.join(b[i : i + 8])!r}"
+        )
     beats = scene["text"].count("[beat]")
     if breaks != beats:
         errors.append(f"{scene['id']}: {breaks} breaks for {beats} [beat] markers")
@@ -75,7 +78,9 @@ def check_scene(scene):
 def main():
     failures = 0
     for path in sys.argv[1:]:
-        for scene in json.load(open(path))["scenes"]:
+        with open(path) as f:
+            scenes = json.load(f)["scenes"]
+        for scene in scenes:
             for err in check_scene(scene):
                 print(f"{path}: {err}")
                 failures += 1
