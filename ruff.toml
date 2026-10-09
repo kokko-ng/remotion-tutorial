@@ -1,0 +1,7 @@
+# Lint and format settings for scripts/. Baseline: ruff's default rule set
+# plus flake8-bugbear (B) and pyupgrade (UP).
+target-version = "py310"
+line-length = 120
+
+[lint]
+extend-select = ["B", "UP"]
