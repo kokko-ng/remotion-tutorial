@@ -1,9 +1,8 @@
 # Codebase walkthrough videos (Fireship-style onboarding)
 
 The default structure for a narrated video that walks engineers through a
-codebase: its architecture, modules, design decisions and cloud services. It
-was proven on a 90-minute, 10-chapter, 78-scene architecture walkthrough.
-Read `gotchas.md` alongside; every rule below exists because something broke.
+codebase: its architecture, modules, design decisions and cloud services.
+Read `gotchas.md` alongside; it records the failures behind these rules.
 
 The briefs this method uses are templates in `references/briefs/`:
 `STYLE.md` (narration voice and grounding), `AUDIT-BRIEF.md`, `FIX-BRIEF.md`,
@@ -51,8 +50,8 @@ the placeholders.
 - **Timing budget** per chapter that sums to the target, and a word budget
   per scene. Do not trust a fixed words-per-minute figure: a Fireship pace is
   far faster than an explainer pace. Measure a sample in the chosen voice and
-  rate (for example Davis at +8 percent ran about 210 wpm; the 155 wpm
-  default undershot a 90-minute target by 20 percent). Final chapter lengths
+  rate (for example Davis at +8 percent runs about 210 wpm, far above the
+  155 wpm explainer pace). Final chapter lengths
   come from the synthesized audio; adjust the global rate and sentence gap to
   land the total, not the words.
 - List up front: rationale you are inferring, doc and code discrepancies,
@@ -74,9 +73,8 @@ the placeholders.
   `FIX-BRIEF.md`: verify every finding against the code before applying it
   (auditors are wrong sometimes), reopen the cited file for every factual
   change, grep all chapters for repeats of a fixed claim, re-check visual line
-  ranges against the moved repository. Expect each audit to find real errors:
-  three passes found 109, 63 and 42 issues (18, 7 and 4 blockers), mostly
-  places where the docs said one thing and the code another.
+  ranges against the moved repository. Expect each audit to find real errors,
+  mostly places where the docs say one thing and the code another.
 - Final consistency sweep yourself: repeated gags, dashes, banned words,
   spellings that subtitles must keep ("ID", not a phonetic "I D").
 - Deliver `NARRATION.md` (all chapters, scenes in order, inferred rationale
@@ -154,7 +152,7 @@ the placeholders.
 ## 7. Layout linter (must be green before any render)
 
 `scripts/layout_sweep.sh` runs every rule in `checks.ts` on every scene
-every 2 seconds. Run `scripts/layout_selftest.sh` after changing any rule or
+at 1-second sampling (`SWEEP_EVERY_SEC=1`). Run `scripts/layout_selftest.sh` after changing any rule or
 kit component: it proves the fixture (`src/scenes/dev/`) trips every rule and
 the clean preview trips none. A rule that suddenly reports zero issues gets
 suspicion, not relief: two rules once passed everything because of a selector

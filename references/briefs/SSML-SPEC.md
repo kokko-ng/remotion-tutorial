@@ -9,10 +9,11 @@ Never add, drop, or reorder a word.
 
 ## Global (added by the generator, do not repeat)
 
-- Base rate: `<prosody rate="+8%">` around the whole scene (Fireship pace without
-  slurring; tune after the A/B sample).
-- `<mstts:silence type="Sentenceboundary-exact" value="140ms"/>`: tight gaps between
-  sentences, so the pace is set by the writing, not by default pauses.
+- Base rate: `<prosody rate="<RATE>">` around each run (from narration.json `rate`; tune
+  after the A/B sample).
+- `<mstts:silence type="Sentenceboundary-exact" value="<SENTENCE GAP>"/>` (narration.json
+  `sentenceGap`): tight gaps between sentences, so the pace is set by the writing, not by
+  default pauses.
 
 ## Elements you may use (Azure-supported, verified on Microsoft Learn)
 
@@ -26,7 +27,7 @@ Never add, drop, or reorder a word.
 | `<sub alias="my package">mypkg</sub>` | identifiers spoken differently from their spelling | Use the alias table below. Inner text must equal the subtitle word |
 | `<say-as interpret-as="characters">ARM</say-as>` | acronyms the engine would read as a word | Only where a word reading is wrong (ARM, AMQP, RBAC, OIDC, SKU, CLI, TLS, UTC, PTU) |
 
-Do not use `audio`, `bookmark`, `lexicon`, `mstts:express-as` (Andrew has no styles), `p`,
+Do not use `audio`, `bookmark`, `lexicon`, `mstts:express-as`, `p`,
 `s`, `phoneme`, or `voice`. Escape `&`, `<`, `>` in text as entities.
 
 ## Alias table (spoken form; subtitles keep the spelling)

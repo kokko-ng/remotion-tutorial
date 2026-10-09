@@ -17,19 +17,18 @@ You apply one audit pass's findings to the chapters you are assigned.
    right one.
 5. Update `sources`, `inferred`, and `visual` when a fix changes them. On-screen material must
    never show a real person's name or email address (crop config lines that hold one).
-6. Write chapter files back with the Write tool (JSON must stay valid). Append your log to
-   `script/audits/pass-N-fixes.md` as a section per chapter: finding id, applied or rejected,
-   one line why. Use the Write tool on your own file `script/audits/pass-N-fixes-<chapters>.md`
-   to avoid clobbering other fixers.
+6. Write chapter files back with the Write tool (JSON must stay valid). Write your log to
+   your own file `script/audits/pass-N-fixes-<chapters>.md` (so fixers never clobber each
+   other), a section per chapter: finding id, applied or rejected, one line why.
 7. Final checks: valid JSON, word counts, greps for dashes, curly quotes, banned words.
-   Report in under 120 words: applied, rejected (with ids), word counts.
+   Report briefly: applied, rejected (with ids), word counts.
 
 ## Additional rules from pass 2 onward
 
 8. For every factual finding, open the repository file at the cited lines with the Read
    tool or `sed -n` before changing the text. A fix applied without reading the code is a
    defect. Log the file:line you read next to each finding.
-9. Consistency across chapters: after fixing a claim, grep all ten chapter files for the
+9. Consistency across chapters: after fixing a claim, grep every chapter file for the
    same claim (key nouns and numbers). Fix every occurrence inside your own chapters, and
    list occurrences in other chapters in your log under "cross-chapter" so the coordinator
    can confirm the other fixer caught them.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.1
+
+- Prompt audit of the skill and its references: removed the retired
+  `arrow-detached` and `arrow-through-text` rows from the review checklist
+  and gotchas (superseded by `link-gap`, `link-cross` and `link-label`),
+  fixed the scene guide's import paths and layout sweep command, aligned the
+  narration example with the default voice (Ava) and the walkthrough sweep
+  with 1-second sampling, replaced fixed rate, gap and words-per-second
+  figures in the brief templates with placeholders, and trimmed history
+  narratives and a word cap from the instructions.
+
 ## 1.3.0
 
 - Codebase walkthrough mode: `references/codebase-walkthrough.md` is the

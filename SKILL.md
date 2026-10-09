@@ -35,10 +35,9 @@ tour, "explain this repo as a video"), follow
 `references/codebase-walkthrough.md` as the structure for the whole job: it
 replaces Steps 2 and 3 below (episodic chapters with cold opens and recaps,
 parallel writers, a humanizer pass, three sequential audits) and adds the
-asset, diagram, design and review steps on top of Steps 4 to 10. It was
-proven end to end on a 90-minute, 10-chapter walkthrough; every pitfall it
-hit is in `references/gotchas.md`, and the briefs it hands to subagents are
-templates in `references/briefs/`. Default preset: `terminal`. Grounding
+asset, diagram, design and review steps on top of Steps 4 to 10. Its
+known pitfalls are in `references/gotchas.md`, and the briefs it hands to
+subagents are templates in `references/briefs/`. Default preset: `terminal`. Grounding
 comes from the repository, not the web (`references/grounding.md` still
 applies to any external claim).
 
@@ -78,8 +77,7 @@ Word budget: duration x the words per minute of the chosen voice and rate.
 Measure it on one sample scene before budgeting; do not assume a figure.
 Explainer pace is about 155 wpm (en-US-AvaMultilingualNeural at -4%, so 60
 minutes is roughly 9,300 words); Fireship pace is far faster (en-US-
-DavisNeural at +8% ran about 210 wpm, and budgeting a walkthrough at 155 wpm
-undershot its target length by 20 percent). Land the final length with the
+DavisNeural at +8% runs about 210 wpm). Land the final length with the
 global rate and sentence gap, not by padding words.
 
 ## Step 2: Outline and grounding (user checkpoint)
@@ -111,7 +109,7 @@ Save as `narration.json`:
 
 ```json
 {
-  "voice": "en-US-AndrewMultilingualNeural",
+  "voice": "en-US-AvaMultilingualNeural",
   "rate": "-4%",
   "scenes": [{"id": "s01", "text": "..."}, {"id": "s02", "text": "..."}]
 }
@@ -204,7 +202,7 @@ Run `npx tsc --noEmit` in the project until clean.
 Follow `references/review-checklist.md` exactly. Summary:
 
 ```bash
-scripts/layout_sweep.sh videos/<slug>                                # automated, whole video
+SWEEP_EVERY_SEC=1 scripts/layout_sweep.sh videos/<slug>              # automated, whole video
 python3 scripts/review_stills.py --project videos/<slug>            # pass 1
 python3 scripts/review_stills.py --project videos/<slug> --shift 5 --debug   # pass 2
 ```

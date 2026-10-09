@@ -118,11 +118,11 @@ linter; the rest are process rules. Read before starting a walkthrough
 - A `Window` body 2px wider than its border tripped `clipped-text`: the clip check is
   sensitive to off-by-border sizing, which is the point.
 - `frameNodes` cannot frame very tall nodes at 16px label size; a legible-frame helper
-  that trades whole-node framing for label legibility was needed (a per-chapter legible-frame helper).
+  that trades whole-node framing for label legibility was needed.
 - `at('word')` matches the first occurrence: common words ("nothing", "the") key to the
   wrong moment. Use phrases or the occurrence argument, and check every key resolves.
-- Builders render many review stills: a single-bundle still renderer (`tools/stills.mjs`)
-  is far faster than `npx remotion still` per frame.
+- Builders render many review stills: a single-bundle still renderer (bundle once, then
+  render each still from it) is far faster than `npx remotion still` per frame.
 - There is no official Azure icon for Azure Managed Redis; the Cache for Redis icon may only
   represent Cache for Redis, so the Managed Redis shot uses no icon.
 - Mock cards, terminals and REPL output must be labelled "illustrative" on screen.
@@ -159,11 +159,9 @@ linter; the rest are process rules. Read before starting a walkthrough
   as skipped, never as passed.
 - `NOT_A_CONTAINER` style rules must read the element's own name and type, not its technology
   list: "Python 3.12, azure-eventhub SDK" does not make a container a library.
-- `adg edit --criteria` appends; pass all drivers in one multi-line value, and check for
-  duplicates. New Markdown files fail the doc-links hook until they are staged.
 - Merging to the repository: separate worktree and branch (other agents share the checkout),
-  ADR for a convention that constrains future work, hooks on commit and pre-push, PR from the
-  template, wait for every required check, rebase merge only (no squash).
+  ADR for a convention that constrains future work, and the repository's own hooks, PR
+  template, required checks and merge strategy.
 
 ## Review stills
 
@@ -175,11 +173,11 @@ linter; the rest are process rules. Read before starting a walkthrough
 ## Arrows, columns and named boxes (from the user's still review)
 
 - Arrows drawn from a fixed x float off tags of different widths, cut through their own
-  tag's text, and pile their heads into one point. Rules: `arrow-detached` (both ends
-  within 14px of an audited box), `arrow-through-text` (line or label over text ink),
-  `arrow-pileup` (heads at least 10px apart). The Arrow exposes its real endpoints as
-  `data-arrow` so the audit reads geometry, not intent. Compute arrow ends from the boxes
-  they connect.
+  tag's text, and pile their heads into one point. Rules: `link-gap` (both ends touch
+  what they connect), `link-cross` (no box or text between the ends), `link-label` (labels
+  clear of boxes and text), `arrow-pileup` (heads at least 10px apart). The Arrow exposes
+  its real endpoints so the audit reads geometry, not intent. Compute arrow ends from the
+  boxes they connect.
 - Side-by-side columns must be top-aligned (`column-top`, 24px). Compare only the parts of
   two columns that share vertical span, so a header above both does not count, and do not
   exclude wide windows from column detection (a 1,100px code window beside a stack is

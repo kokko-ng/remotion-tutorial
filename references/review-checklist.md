@@ -33,8 +33,6 @@ editable in `RULES`:
 | `cropped-label:<id>` | a diagram zoom slices a label at the viewport edge; use `frameNodes` |
 | `unlabelled-node:<id>` | a diagram zoom shows a node box without its name |
 | `off-center:<id>` | a composition wider than 60 percent of the safe width is more than 5 percent off centre; opt out with `data-layout-intent="asymmetric"` or exclude chrome with `data-composition-ignore` |
-| `arrow-detached` | an arrow end is more than 14px from any audited box |
-| `arrow-through-text` | an arrow or its label crosses text |
 | `arrow-pileup` | two arrow heads from different tails land within 10px of each other |
 | `column-top:a+b(Npx)` | side-by-side columns start more than 24px apart vertically (full-width rows are exempt) |
 | `wordFrame: "..." not found` | a reveal cue is not in the narration, so it fires at frame 0 |
@@ -49,13 +47,8 @@ editable in `RULES`:
 | `void:content-ends-at-yN` | the scene never paints below y=760 (`SWEEP_MIN_BOTTOM`) |
 | `zone-offcenter:<zone>` | content held in a zone for 2 s or more is off center (12 / 15 percent) |
 
-Every rule came from a blemish a human reviewer spotted in a rendered frame
-that the earlier checks passed. When a reviewer finds a new class of blemish,
-add a rule for the class (and prove it on a seeded example) rather than
-fixing only the instance.
-
-Every rule except `wordFrame` and `inset` came from a defect a human found in
-a still that the sweep had passed. When that happens again, add the rule, add
+When a reviewer finds a blemish in a still that the sweep passed, add a
+rule for the class rather than fixing only the instance: add the rule, add
 an element that breaks it to the `devfail` fixture, and extend
 `scripts/layout_selftest.sh`.
 

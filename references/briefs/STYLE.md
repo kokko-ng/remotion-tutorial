@@ -8,7 +8,7 @@ point (the joke IS the trade-off, the failure mode, or the rejected alternative)
 joke that bends a fact. Second person is fine ("you"), the narrator is a slightly tired senior
 engineer who respects the design and mocks the problems it solves.
 
-Do NOT use Fireship's branding or catchphrases: no "in 100 seconds", no "hit like and
+Do not use Fireship's branding or catchphrases: no "in 100 seconds", no "hit like and
 subscribe", no "thanks for watching and I will see you in the next one", no "it's go time",
 no "this has been...", no mention of Fireship or any creator.
 
@@ -26,7 +26,9 @@ Return to the through-line at least once per chapter: "<THROUGH-LINE SENTENCE>".
 
 ## Word budget
 
-About 2.7 words per scene-second (165 wpm). Each scene's `targetWords` = round(sec * 2.7).
+<WORDS PER SECOND> words per scene-second, measured on a synthesized sample in the chosen
+voice and rate (Davis at +8 percent runs about 3.5). Each scene's `targetWords` =
+round(sec * <WORDS PER SECOND>).
 Stay within plus or minus 8 percent per scene, plus or minus 4 percent per chapter.
 
 ## Grounding (non-negotiable)
@@ -53,7 +55,7 @@ Stay within plus or minus 8 percent per scene, plus or minus 4 percent per chapt
 - Numbers: write them as you want them spoken ("three hundred Australian dollars a month",
   "USD 300" is fine too; be consistent within a chapter). Write "Event Hubs", "Cosmos DB",
   "AKS", "Entra ID".
-- `[beat]` marks a 300 ms pause after a punchline. Use sparingly (at most about one per 40
+- `[beat]` marks a short pause after a punchline (250 ms unless the project sets `--beat`). Use sparingly (at most about one per 40
   seconds). It is stripped from subtitles.
 
 ## Humanizer hard rules (apply while drafting)

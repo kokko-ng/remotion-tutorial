@@ -20,9 +20,9 @@ key there, and unbuilt scenes render a placeholder.
 ```tsx
 import React from 'react';
 import {Sequence, useVideoConfig} from 'remotion';
-import {SafeArea} from '../components/layout/SafeArea';
-import {useSceneWords} from '../components/kit/words';
-import type {SceneProps} from '../types';
+import {SafeArea} from '../../components/layout/SafeArea';
+import {useSceneWords} from '../../components/kit/words';
+import type {SceneProps} from '../index';
 
 export const S20_FeedPoller: React.FC<SceneProps> = ({sceneId}) => {
   const {fps} = useVideoConfig();
@@ -92,7 +92,7 @@ export const S20_FeedPoller: React.FC<SceneProps> = ({sceneId}) => {
 
 ```bash
 npx tsc --noEmit
-scripts/layout_sweep.sh chNN              # exit 0 (no [layout] findings) required
+SWEEP_EVERY_SEC=1 <SKILL_DIR>/scripts/layout_sweep.sh . chNN   # exit 0 (no [layout] findings) required
 npx remotion still src/index.ts chNN out/chNN-check.png --frame=<f>   # look at 3 or more frames
 ```
 

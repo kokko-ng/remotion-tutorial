@@ -66,9 +66,8 @@ any of them is a review finding:
 
 ## Craft floor (applies to every preset)
 
-These came from a design review of a terminal-preset walkthrough (the
-Impeccable skill's `detect` plus its craft references) and hold for all
-presets:
+These hold for all presets (the Impeccable skill's `detect` and craft
+references check them):
 
 - Muted ink meets 4.5:1 contrast against the background; diagram lines and
   labels too.
@@ -105,7 +104,7 @@ sets.
 
 ## Motion correctness
 
-Two bugs shipped once and are now rules:
+Two rules for animated elements:
 
 - Gate looping animations (traffic pulses, blinking cursors) on elapsed
   frames, never on entrance progress reaching 1. Spring entrances overshoot

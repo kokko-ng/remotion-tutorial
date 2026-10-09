@@ -1,6 +1,6 @@
 # Narration audit brief
 
-You audit the narration of a 90-minute architecture video about the repository at
+You audit the narration of a <DURATION> architecture video about the repository at
 `<REPO_PATH>` (<PRODUCT NAME>). You are one of three sequential auditors. Earlier passes may have fixed things;
 judge the current text only.
 
