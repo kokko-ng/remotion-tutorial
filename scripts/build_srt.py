@@ -15,6 +15,7 @@ frame units before converting back to milliseconds.
 Usage:
     python3 build_srt.py --project videos/my-video [--max-chars 46] [--max-sec 4.5] [--gap-ms 600]
 """
+
 import argparse
 import json
 import math
@@ -38,8 +39,8 @@ def chunk_words(words, max_chars, max_ms, gap_ms):
             chunks.append(cur)
         cur = None
 
-    open_quote = False   # straight quotes: odd occurrences open, even close
-    pending = ""         # opening punctuation waiting for the next word
+    open_quote = False  # straight quotes: odd occurrences open, even close
+    pending = ""  # opening punctuation waiting for the next word
     for tok in words:
         text = tok["text"]
         start = tok["startMs"]
@@ -56,9 +57,7 @@ def chunk_words(words, max_chars, max_ms, gap_ms):
             if cur:
                 cur["text"] = cur["text"].rstrip() + text + " "
                 cur["endMs"] = max(cur["endMs"], end)
-                if text in SENTENCE_END:
-                    close()
-                elif text in SOFT_BREAK and len(cur["text"]) > max_chars * 0.6:
+                if text in SENTENCE_END or text in SOFT_BREAK and len(cur["text"]) > max_chars * 0.6:
                     close()
             continue
 
@@ -81,7 +80,7 @@ def chunk_words(words, max_chars, max_ms, gap_ms):
 
 
 def fmt_srt_time(ms):
-    ms = max(0, int(round(ms)))
+    ms = max(0, round(ms))
     h, rem = divmod(ms, 3600000)
     m, rem = divmod(rem, 60000)
     s, milli = divmod(rem, 1000)

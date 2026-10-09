@@ -11,18 +11,39 @@ Usage: python3 build_credits.py --project videos/<slug> [--repo-name "<name>"]
 Every raster the video can show is listed with its source and licence, and the
 on-screen credit string comes from the same record, so the two cannot drift.
 """
+
 import argparse
 import json
 import sys
 from pathlib import Path
+
 ICON_NAMES = {
-    "aks": "Azure Kubernetes Service", "event-hubs": "Event Hubs", "redis": "Azure Cache for Redis / Azure Managed Redis",
-    "cosmos-db": "Azure Cosmos DB", "key-vault": "Key Vault", "azure-openai": "Azure OpenAI", "container-registry": "Container Registry",
-    "nat-gateway": "NAT gateway", "private-endpoint": "Private endpoint", "storage-account": "Storage account", "monitor": "Azure Monitor",
-    "application-insights": "Application Insights", "log-analytics": "Log Analytics workspace", "virtual-network": "Virtual network",
-    "firewall": "Azure Firewall", "managed-identity": "Managed identity", "policy": "Azure Policy", "cost-budgets": "Cost budgets",
-    "ai-search": "Azure AI Search", "load-balancer": "Load balancer", "public-ip": "Public IP address", "front-door": "Front Door",
-    "service-bus": "Service Bus", "sql-managed-instance": "SQL Managed Instance", "function-apps": "Function Apps", "ai-services": "Azure AI services",
+    "aks": "Azure Kubernetes Service",
+    "event-hubs": "Event Hubs",
+    "redis": "Azure Cache for Redis / Azure Managed Redis",
+    "cosmos-db": "Azure Cosmos DB",
+    "key-vault": "Key Vault",
+    "azure-openai": "Azure OpenAI",
+    "container-registry": "Container Registry",
+    "nat-gateway": "NAT gateway",
+    "private-endpoint": "Private endpoint",
+    "storage-account": "Storage account",
+    "monitor": "Azure Monitor",
+    "application-insights": "Application Insights",
+    "log-analytics": "Log Analytics workspace",
+    "virtual-network": "Virtual network",
+    "firewall": "Azure Firewall",
+    "managed-identity": "Managed identity",
+    "policy": "Azure Policy",
+    "cost-budgets": "Cost budgets",
+    "ai-search": "Azure AI Search",
+    "load-balancer": "Load balancer",
+    "public-ip": "Public IP address",
+    "front-door": "Front Door",
+    "service-bus": "Service Bus",
+    "sql-managed-instance": "SQL Managed Instance",
+    "function-apps": "Function Apps",
+    "ai-services": "Azure AI services",
 }
 
 
@@ -59,7 +80,9 @@ def main():
         "|---|---|---|---|---|",
     ]
     for stem, m in images:
-        lines.append(f"| `images/{stem}.png` | {m['scene']} | {m['point']} | {m['model']} (seed {m['seed']}) | {m['generated_at']} |")
+        lines.append(
+            f"| `images/{stem}.png` | {m['scene']} | {m['point']} | {m['model']} (seed {m['seed']}) | {m['generated_at']} |"
+        )
     lines += [
         "",
         "## Azure architecture icons",

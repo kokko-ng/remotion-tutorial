@@ -10,7 +10,7 @@ cd "$OUT"
 ls ch*.mp4 >/dev/null 2>&1 || { echo "no ch*.mp4 files in $OUT" >&2; exit 1; }
 
 : > list.txt
-for f in $(ls ch*.mp4 | sort); do
+for f in ch*.mp4; do
   echo "file '$f'" >> list.txt
 done
 

@@ -14,6 +14,7 @@ Usage:
     python3 review_stills.py --project videos/my-video --scenes s02 --shift 5
     python3 review_stills.py --project videos/my-video --debug
 """
+
 import argparse
 import json
 import math
@@ -64,16 +65,22 @@ def main():
             sys.exit(f"scene {sid} has no durationSec; run generate_voiceover.py first")
         comp, base = offsets[sid]
         total = scene_frames(scene, fps)
-        jobs = [(f"{sid}-p{int(p):02d}.png", base + min(total - 1, int(round(p / 100 * total))), False)
-                for p in percents]
+        jobs = [(f"{sid}-p{int(p):02d}.png", base + min(total - 1, round(p / 100 * total)), False) for p in percents]
         if args.debug:
             jobs.append((f"{sid}-debug.png", base + total // 2, True))
         for name, frame, debug in jobs:
-            cmd = ["npx", "remotion", "still", "src/index.ts", comp,
-                   str((out_dir / name).resolve()), f"--frame={frame}"]
+            cmd = [
+                "npx",
+                "remotion",
+                "still",
+                "src/index.ts",
+                comp,
+                str((out_dir / name).resolve()),
+                f"--frame={frame}",
+            ]
             if debug:
                 cmd.append('--props={"debugLayout":true}')
-            res = subprocess.run(cmd, cwd=project, capture_output=True, text=True)
+            res = subprocess.run(cmd, cwd=project, capture_output=True, text=True, check=False)
             if res.returncode != 0:
                 failures.append((name, res.stderr[-800:]))
                 print(f"  FAIL {name}")

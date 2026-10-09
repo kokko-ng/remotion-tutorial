@@ -29,6 +29,7 @@ Usage:
         --group <resource-group> [--subscription <id>] [--deployment flux-2-pro] \
         [--only id1,id2] [--force] [--seed 7]
 """
+
 import argparse
 import base64
 import json
@@ -46,7 +47,21 @@ DEPLOYMENT = "flux-2-pro"
 
 
 def api_key(resource, group, subscription):
-    cmd = ["az", "cognitiveservices", "account", "keys", "list", "-n", resource, "-g", group, "--query", "key1", "-o", "tsv"]
+    cmd = [
+        "az",
+        "cognitiveservices",
+        "account",
+        "keys",
+        "list",
+        "-n",
+        resource,
+        "-g",
+        group,
+        "--query",
+        "key1",
+        "-o",
+        "tsv",
+    ]
     if subscription:
         cmd += ["--subscription", subscription]
     return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout.strip()
@@ -69,7 +84,11 @@ def image_bytes(result):
     """The response carries base64 data or a URL; accept the shapes BFL and Azure use."""
     candidates = []
     if isinstance(result, dict):
-        candidates += [result.get("b64_json"), result.get("image"), (result.get("result") or {}).get("sample") if isinstance(result.get("result"), dict) else None]
+        candidates += [
+            result.get("b64_json"),
+            result.get("image"),
+            (result.get("result") or {}).get("sample") if isinstance(result.get("result"), dict) else None,
+        ]
         for item in result.get("data") or []:
             candidates += [item.get("b64_json"), item.get("url")]
         candidates += [result.get("url"), result.get("sample")]
